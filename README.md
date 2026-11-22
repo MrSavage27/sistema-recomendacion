@@ -103,3 +103,7 @@ FROM evento WHERE tipo = 'interpretacion' GROUP BY 1 ORDER BY 2 DESC;
 ## Actualizar precios
 
 Edita `db/seed.sql` (o inserta en `oferta`) con la fecha de consulta y ejecuta `npm run db:migrate`. Para retirar una oferta: `UPDATE oferta SET vigente = false WHERE ...`.
+
+## Despliegue
+
+Guía para EC2 en el AWS Learner Lab: [deploy/README.md](deploy/README.md).

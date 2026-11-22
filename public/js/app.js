@@ -17,7 +17,9 @@ const gap=(m,id)=>gapR(m,T[id],st.intens[id]);
 const evaluate=()=>evaluar(C,T,st);
 
 // Eventos anónimos para validar el producto (no se envía el texto que escribe el usuario).
-const SID=(()=>{try{let s=sessionStorage.getItem("medida.sid");if(!s){s=crypto.randomUUID();sessionStorage.setItem("medida.sid",s)}return s}catch{return null}})();
+// randomUUID solo existe en HTTPS/localhost; en HTTP (EC2 sin certificado) se arma con getRandomValues.
+const uuid=()=>crypto.randomUUID?crypto.randomUUID():([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+const SID=(()=>{try{let s=sessionStorage.getItem("medida.sid");if(!s){s=uuid();sessionStorage.setItem("medida.sid",s)}return s}catch{return null}})();
 function track(tipo,datos){try{fetch("/api/eventos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sesion:SID,tipo,datos}),keepalive:true}).catch(()=>{})}catch{}}
 
 async function boot(){
