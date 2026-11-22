@@ -32,6 +32,8 @@ async function boot(){
 
 const EST={insuficiente:["✕","Insuficiente","bad"],a_medida:["✓","A tu medida","ok"],mas_de_lo_necesario:["!","Más de lo que necesitas","warn"]};
 const NE_CAT={software_especifico:"software específico",hardware_especifico:"hardware específico",uso_profesional:"uso profesional",otro:"otro uso"};
+const FTIPO={fabricante:"Fabricante",tienda:"Tienda",review_tecnica:"Review técnica",interpretacion:"Interpretación del sistema",otro:"Otra fuente"};
+const FATR={specs:"Especificaciones",precio:"Precio",general:"General"};
 const estadoDe=i=>i.suf?.estado||(i.fit?"a_medida":"insuficiente");
 const light=i=>{const e=EST[estadoDe(i)]||EST.insuficiente;const fp=i.suf?.fuera_presupuesto||(!i.ok&&estadoDe(i)!=="insuficiente");
   return`<span class="light ${e[2]}"><i aria-hidden="true">${e[0]}</i>${e[1]}</span>${fp?'<span class="light warn budget"><i aria-hidden="true">!</i>Fuera de presupuesto</span>':""}`};
@@ -129,11 +131,22 @@ async function detect(){const raw=$("txt").value.trim();st.text=raw;const d=$("d
   render();let msg=f.length?`Entendimos: ${r.tareas.map(t=>T[t.id].l.toLowerCase()+(t.intensidad==="ocasional"?" (a veces)":"")).join(", ")}.`:"No reconocimos tareas. Elígelas abajo.";
   if((r.no_entendido_cat||[]).length){const cats=[...new Set(r.no_entendido_cat)].map(c=>NE_CAT[c]||c).join(", ");msg+=` No ubicamos: ${cats}; elige la tarea más parecida.`;}
   if(f.length)msg+=" Corrige abajo si hace falta.";$("dn").textContent=msg;$("txt").value=raw}
-function showSrc(id){const m=C.find(x=>x.id===id);$("srcc").innerHTML=`<p><b>${nm(m)}</b><br><span class="src">${m.model}</span></p><p style="margin-top:10px"><b>Datos técnicos</b><br>${m.spec}</p><p style="margin-top:8px"><b>Precio referencial</b><br>${m.store} · ${m.ref}</p><p class="field-help">Los precios corresponden a las publicaciones consultadas y pueden variar.</p>`;$("srcd").showModal();track("explicacion_vista",{v:2,laptop:id,bloque:"ten_en_cuenta"})}
+function showSrc(id,origen="fuentes"){const m=C.find(x=>x.id===id);if(!m)return;
+  const fbs=(dim,ctx,label)=>`<div class="fb" data-fb="${dim}" data-ctx="${ctx}"><span>${label}</span><div class="row">${[["si","Sí"],["mas_o_menos","Más o menos"],["no","No"]].map(([v,l])=>`<button type="button" class="pick" data-act="fb" data-dim="${dim}" data-val="${v}" data-ctx="${ctx}">${l}</button>`).join("")}</div></div>`;
+  const fuentes=(m.fuentes||[]).map(f=>{const tipo=FTIPO[f.tipo]||f.tipo;const atr=FATR[f.atributo]||f.atributo;const fecha=f.fecha?mes(f.fecha):"sin fecha";
+    const url=f.url&&/^https?:\/\//.test(f.url)?`<a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">Ver fuente</a>`:"";
+    const ver=f.verificada?'<span class="light ok" style="font-size:12px;padding:2px 8px"><i aria-hidden="true">✓</i>Verificada</span>':'<span class="light warn" style="font-size:12px;padding:2px 8px"><i aria-hidden="true">!</i>Referencial</span>';
+    return `<li class="src-item"><div class="row" style="gap:8px;align-items:center"><b>${esc(tipo)}</b><span class="src">${esc(atr)} · ${fecha}</span>${ver}</div><div>${esc(f.nombre)} ${url}</div>${f.nota?`<p class="field-help" style="margin:2px 0 0">${esc(f.nota)}</p>`:""}</li>`}).join("");
+  $("srcc").innerHTML=`<p><b>${nm(m)}</b><br><span class="src">${esc(m.model)}</span></p>
+    <div style="margin-top:10px"><b>Fuentes y evidencia</b><p class="field-help" style="margin:4px 0 8px">Cada dato indica su origen, fecha y si fue verificado. La recomendación es una interpretación del sistema basada en reglas visibles.</p>
+    ${fuentes?`<ul class="src-list">${fuentes}</ul>`:`<p><b>Datos técnicos</b><br>${esc(m.spec||"")}</p><p style="margin-top:8px"><b>Precio referencial</b><br>${esc(m.store)} · ${esc(m.ref)}</p>`}
+    </div>
+    <div class="insight" style="margin-top:12px"><div><strong>¿Te ayudó esta información?</strong><p class="field-help">Opcional.</p>${fbs("confianza","fuentes","¿Estas fuentes te dan confianza?")}</div></div>`;
+  $("srcd").showModal();track("fuente_vista",{v:2,laptop:id,origen_ui:origen});}
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const a=b.dataset.act,id=b.dataset.id;
  if(a==="home"){st.step="profile";render()}
  else if(a==="how")$("how").showModal();else if(a==="closehow")$("how").close();
- else if(a==="detect")detect();else if(a==="src")showSrc(id);else if(a==="closesrc")$("srcd").close();
+ else if(a==="detect")detect();else if(a==="src"){const o=st.step==="compare"?"compare":st.step==="choice"?"choice":st.step==="results"?"card":"fuentes";showSrc(id,o)}else if(a==="closesrc")$("srcd").close();
  else if(a==="persona"){st.tasks=[...P[id][1]];st.intens={};st.touched=1;paint()}
   else if(a==="task"){st.touched=1;const on=st.tasks.includes(id);st.tasks=on?st.tasks.filter(x=>x!==id):[...st.tasks,id];if(on)delete st.intens[id];if(!on&&!st.intens[id])st.intens[id]="frecuente";if(st.detected)track("correccion",{v:2,motor:st.detected.motor||st.detected.fuente,fuente:st.detected.fuente,tarea:id,accion:on?"quitar":"agregar"});paint();if(st.step==="results")$("list").innerHTML=list()}
   else if(a==="inten"){st.touched=1;st.intens[id]=st.intens[id]==="ocasional"?"frecuente":"ocasional";paint();if(st.step==="results")$("list").innerHTML=list()}

@@ -72,6 +72,21 @@ CREATE TABLE IF NOT EXISTS oferta (
 );
 CREATE INDEX IF NOT EXISTS oferta_vigente_idx ON oferta (laptop_id) WHERE vigente;
 
+-- Fuentes trazables por laptop (Fase 2: confianza curada).
+CREATE TABLE IF NOT EXISTS fuente (
+  id         SERIAL PRIMARY KEY,
+  laptop_id  TEXT NOT NULL REFERENCES laptop(id) ON DELETE CASCADE,
+  tipo       TEXT NOT NULL CHECK (tipo IN ('fabricante','tienda','review_tecnica','interpretacion','otro')),
+  nombre     TEXT NOT NULL,
+  url        TEXT,
+  fecha      DATE,
+  atributo   TEXT NOT NULL DEFAULT 'general',
+  nota       TEXT NOT NULL DEFAULT '',
+  verificada BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS fuente_laptop_idx ON fuente (laptop_id);
+CREATE UNIQUE INDEX IF NOT EXISTS fuente_natural_idx ON fuente (laptop_id, tipo, nombre, atributo);
+
 -- Eventos anónimos para validar hipótesis (sin texto libre del usuario).
 CREATE TABLE IF NOT EXISTS evento (
   id     BIGSERIAL PRIMARY KEY,

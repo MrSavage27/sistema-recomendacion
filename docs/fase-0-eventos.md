@@ -36,12 +36,12 @@
 
 ### Nuevos
 
-| Evento | Campos | Para qué sirve |
-|---|---|---|
-| `fuente_vista` | `v`, `laptop`, `origen_ui` | P1: interés en verificar la información. |
-| `explicacion_vista` | `v`, `laptop`, `bloque` (`por_que`, `detalles_tecnicos`, `ten_en_cuenta`) | P2: exposición a las explicaciones. |
-| `feedback` | `v`, `dimension`, `valor`, `contexto` (`recomendacion`, `comparacion`, `eleccion`) | P1, P2 y P3: percepción declarada (confianza, claridad, suficiencia). |
-| `paso_visto` (opcional) | `v`, `paso` | Embudo; activarlo solo si el ruido es aceptable. |
+| Evento | Campos | Para qué sirve | Estado |
+|---|---|---|---|
+| `fuente_vista` | `v`, `laptop`, `origen_ui` | P1: interés en verificar la información. | Activo en Fase 2. |
+| `explicacion_vista` | `v`, `laptop`, `bloque` (`por_que`, `detalles_tecnicos`, `ten_en_cuenta`, `fuentes`) | P2: exposición a las explicaciones. | Activo en Fase 1. |
+| `feedback` | `v`, `dimension`, `valor`, `contexto` (`recomendacion`, `comparacion`, `eleccion`, `fuentes`) | P1, P2 y P3: percepción declarada (confianza, claridad, suficiencia). | Activo en Fase 1; `confianza` activado en Fase 2. |
+| `paso_visto` (opcional) | `v`, `paso` | Embudo; activarlo solo si el ruido es aceptable. | Allowlist listo; no emitido por defecto. |
 
 ## 4. Diccionario de campos
 

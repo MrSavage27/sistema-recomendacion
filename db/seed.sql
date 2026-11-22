@@ -91,3 +91,16 @@ FROM (VALUES
 JOIN tienda t ON t.nombre = v.tienda
 ON CONFLICT (laptop_id, tienda_id, referencia) DO UPDATE SET
   precio = EXCLUDED.precio, fecha_consulta = EXCLUDED.fecha_consulta, vigente = TRUE;
+
+-- Fuentes trazables (Fase 2). URLs nulas cuando no se verificó un enlace estable.
+INSERT INTO fuente (laptop_id, tipo, nombre, url, fecha, atributo, nota, verificada) VALUES
+('loq','fabricante','Lenovo PSREF · LOQ 15ARP10E',NULL,DATE '2026-11-01','specs','Ficha técnica de referencia del fabricante/modelo. Verificar configuración exacta antes de comprar.',FALSE),
+('loq','tienda','Tottus Perú · ref. 149125539',NULL,DATE '2026-11-01','precio','Precio referencial publicado por la tienda. Puede variar por stock, campaña o configuración.',FALSE),
+('victus','fabricante','HP · Ficha del modelo BT4F1LA',NULL,DATE '2026-11-01','specs','Ficha técnica de referencia del fabricante/modelo. Verificar configuración exacta antes de comprar.',FALSE),
+('victus','tienda','Falabella Perú · ref. 80025939',NULL,DATE '2026-11-01','precio','Precio referencial publicado por la tienda. Puede variar por stock, campaña o configuración.',FALSE),
+('nitro','fabricante','Acer / ficha de configuración ANV15-51-515J',NULL,DATE '2026-11-01','specs','Ficha técnica de referencia de la configuración consultada. Verificar configuración exacta antes de comprar.',FALSE),
+('nitro','tienda','Hiraoka · ref. 133431',NULL,DATE '2026-11-01','precio','Precio referencial publicado por la tienda; publicación consultada incluía mochila. Puede variar.',FALSE),
+('tuf','fabricante','ASUS Perú · FX507ZC4-HN005W',NULL,DATE '2026-11-01','specs','Ficha técnica de referencia del fabricante/modelo. Verificar configuración exacta antes de comprar.',FALSE),
+('tuf','tienda','Tiendas EFE · ref. FX507ZC4HN005W2',NULL,DATE '2026-11-01','precio','Precio especial referencial publicado por la tienda. Puede variar por stock o campaña.',FALSE)
+ON CONFLICT (laptop_id, tipo, nombre, atributo) DO UPDATE SET
+  url = EXCLUDED.url, fecha = EXCLUDED.fecha, nota = EXCLUDED.nota, verificada = EXCLUDED.verificada;

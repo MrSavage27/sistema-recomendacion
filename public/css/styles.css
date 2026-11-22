@@ -66,6 +66,9 @@ textarea{display:block;width:100%;min-height:92px;resize:vertical;border:1px sol
 .extra{font-size:14px;margin:8px 0;color:#294a2c}.extra.w{color:#744717;font-weight:700}
 .price{font:800 24px/1.25 var(--heading);letter-spacing:-.035em}
 .src{font-size:12px;color:var(--muted)}
+.src-list{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:10px}
+.src-item{padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:#fbfcf8;font-size:14px}
+.src-item a{color:var(--deep);font-weight:700}
 details{margin:8px 0;font-size:14px}summary{cursor:pointer;font-weight:700;color:var(--deep)}details ul{margin:6px 0 0;padding-left:18px;color:#3e4d42}
 .catalog-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:8px 0 11px}.catalog-heading h3{font-size:18px}
 .catalog{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
