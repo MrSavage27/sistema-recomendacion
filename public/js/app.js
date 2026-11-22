@@ -1,5 +1,5 @@
 // Medida · frontend. Lógica de recomendación en recomendador.js; catálogo e IA vía API.
-import { perf, gap as gapR, evaluate as evaluar } from "./recomendador.js";
+import { perf, gap as gapR, evaluate as evaluar, REGLA_SUFI_V } from "./recomendador.js";
 
 const $=id=>document.getElementById(id);
 const ic=n=>`<svg class="icon" aria-hidden="true"><use href="#${n}"/></svg>`;
@@ -30,23 +30,30 @@ async function boot(){
   st.tasks=st.tasks.filter(id=>T[id]);render()}
  catch{$("app").innerHTML='<p role="alert" style="padding:24px">No pudimos cargar el catálogo. Recarga la página en unos segundos.</p>'}}
 
-const status=i=>i.fit?"ok":(i.gaps.length||!i.sys)?"bad":"warn";
-const LAB={ok:["✓","Te sirve"],warn:["!","Te queda justo"],bad:["✕","No te conviene"]};
-const light=i=>{const s=status(i);return`<span class="light ${s}"><i aria-hidden="true">${LAB[s][0]}</i>${LAB[s][1]}</span>`};
-function reason(i){if(!i.sys)return"Usa otro sistema y necesitas Windows.";if(i.gaps.length)return`No cubre bien: ${i.gaps.map(g=>T[g.id].l.toLowerCase()).join(", ")}. ${i.gaps[0].g}`;if(!i.ok)return`Cubre tus tareas, pero se pasa ${fmt(i.m.price-st.budget)} de tu tope.`;return"Cubre tus tareas y entra en tu presupuesto."}
+const EST={insuficiente:["✕","Insuficiente","bad"],a_medida:["✓","A tu medida","ok"],mas_de_lo_necesario:["!","Más de lo que necesitas","warn"]};
+const NE_CAT={software_especifico:"software específico",hardware_especifico:"hardware específico",uso_profesional:"uso profesional",otro:"otro uso"};
+const estadoDe=i=>i.suf?.estado||(i.fit?"a_medida":"insuficiente");
+const light=i=>{const e=EST[estadoDe(i)]||EST.insuficiente;const fp=i.suf?.fuera_presupuesto||(!i.ok&&estadoDe(i)!=="insuficiente");
+  return`<span class="light ${e[2]}"><i aria-hidden="true">${e[0]}</i>${e[1]}</span>${fp?'<span class="light warn budget"><i aria-hidden="true">!</i>Fuera de presupuesto</span>':""}`};
+function reason(i){if(!i.sys)return"Usa otro sistema y necesitas Windows.";if(i.gaps.length)return`No cubre bien: ${i.gaps.map(g=>T[g.id].l.toLowerCase()).join(", ")}. ${i.gaps[0].g}`;if(i.suf?.estado==="mas_de_lo_necesario")return i.suf.sobras.map(s=>s.hoy).join(" ");if(!i.ok)return`Cubre tus tareas, pero se pasa ${fmt(i.m.price-st.budget)} de tu tope.`;return"Cubre tus tareas para el uso que describiste."}
 function extra(i,list){const base=list.find(x=>x.fit&&x.m.price===Math.min(...list.filter(y=>y.fit).map(y=>y.m.price)));if(!i.fit||!base||i===base||i.m.price<=base.m.price)return"";
  const d=i.m.price-base.m.price,g=(st.tasks.includes("graphics")||st.tasks.includes("edit"))&&perf(i.m)>perf(base.m),l=st.prio==="mobile"&&i.m.w<base.m.w-.12;
- return g||l?`<p class="extra">+${fmt(d)} frente a ${nm(base.m)}: ${g?"rinde más en juegos y edición":"pesa menos"}.</p>`:`<p class="extra w">Pagar ${fmt(d)} más que con ${nm(base.m)} no mejora lo que haces.</p>`}
-function why(i,list){const out=[];out.push([i.ok,i.ok?`Entra en tu presupuesto (${fmt(st.budget-i.m.price)} de margen)`:`Se pasa ${fmt(i.m.price-st.budget)} de tu tope`]);
- if(st.win)out.push([i.sys,i.sys?"Funciona con Windows 11":"No usa Windows"]);st.tasks.forEach(id=>{const g=gap(i.m,id);out.push([!g,g?`${T[id].l}: ${g}`:`Cubre: ${T[id].l.toLowerCase()}`])});
+ if(i.suf?.estado==="mas_de_lo_necesario") return`<p class="extra w">+${fmt(d)} frente a ${nm(base.m)}. ${i.suf.sobras.map(s=>s.hoy).join(" ")} <span class="field-help">Cuándo sí valdría la pena: ${i.suf.sobras.map(s=>s.cuando).join(" ")}</span></p>`;
+ return g||l?`<p class="extra">+${fmt(d)} frente a ${nm(base.m)}: ${g?"rinde más en lo que haces":"pesa menos para llevarla a diario"}.</p>`:`<p class="extra w">Pagar ${fmt(d)} más que con ${nm(base.m)} no mejora lo que haces.</p>`}
+function why(i,list){const out=[];
+ out.push([i.ok,i.ok?`Entra en tu presupuesto (${fmt(st.budget-i.m.price)} de margen)`:`Fuera de presupuesto: se pasa ${fmt(i.m.price-st.budget)} de tu tope`]);
+ if(st.win)out.push([i.sys,i.sys?"Funciona con Windows 11":"No usa Windows"]);
+ st.tasks.forEach(id=>{const g=gap(i.m,id);out.push([!g,g?`${T[id].l}: ${g}`:`Cubre: ${T[id].l.toLowerCase()}`])});
+ if(i.suf?.estado==="mas_de_lo_necesario") out.push([false,`Más de lo que necesitas: ${i.suf.sobras.map(s=>s.label).join(", ")} por encima de tu uso actual`]);
  const f=list.find(x=>x.fit);if(i.fit&&f===i){out.push([1,{price:"Es la más barata de las que te sirven",mobile:"Es la más liviana de las que te sirven",speed:"Es la que más rinde de las que te sirven",screen:"Su pantalla está entre las mejores de las que te sirven"}[st.prio]])}
  return`<ul class="why">${out.map(([o,t])=>`<li class="${o?"":"no"}">${t}</li>`).join("")}</ul>`}
-const det=m=>`<details><summary>Detalles técnicos</summary><ul><li><b>${m.ram} GB de RAM:</b> memoria para tener varias pestañas y programas abiertos a la vez.</li><li><b>${m.ssd} GB de SSD:</b> espacio para programas, documentos y algunos juegos.</li><li><b>${m.cpu}:</b> el “cerebro” que mueve los programas.</li><li><b>${m.gpu} (${m.gm} GB):</b> la parte que dibuja juegos y 3D.</li><li>${m.screen}</li></ul></details>`;
+const det=m=>`<details data-laptop="${m.id}" data-bloque="detalles_tecnicos"><summary>Detalles técnicos</summary><ul><li><b>${m.ram} GB de RAM:</b> memoria para tener varias pestañas y programas abiertos a la vez.</li><li><b>${m.ssd} GB de SSD:</b> espacio para programas, documentos y algunos juegos.</li><li><b>${m.cpu}:</b> el “cerebro” que mueve los programas.</li><li><b>${m.gpu} (${m.gm} GB):</b> la parte que dibuja juegos y 3D.</li><li>${m.screen}</li></ul></details>`;
 const src=m=>`<p class="src">${fmt(m.price)} · ${m.store} · ref. ${m.ref} · precio referencial, ${mes(m.fecha)}</p>`;
 const img=m=>m.img
   ?`<div class="pimg"><img src="${m.img}" alt="${nm(m)}" loading="lazy" style="max-width:100%;height:132px;object-fit:contain"></div>`
   :`<div class="pimg"><div>${ic("laptop")}${m.brand}</div></div>`;
-const chips=()=>Object.entries(T).map(([id,t])=>`<button type="button" class="pick" data-act="task" data-id="${id}" aria-pressed="${st.tasks.includes(id)}">${ic("check")}${t.l}${st.intens[id]==="ocasional"&&st.tasks.includes(id)?" · a veces":""}</button>`).join("");
+const chips=()=>Object.entries(T).map(([id,t])=>{const on=st.tasks.includes(id),oc=st.intens[id]==="ocasional";
+  return`<span class="chip-wrap"><button type="button" class="pick" data-act="task" data-id="${id}" aria-pressed="${on}">${ic("check")}${t.l}</button>${on?`<button type="button" class="pick inten" data-act="inten" data-id="${id}" aria-pressed="${oc}" aria-label="${t.l}: ${oc?"ocasional":"frecuente"}; toca para cambiar">${oc?"A veces":"Frecuente"}</button>`:""}</span>`}).join("");
 const presets=()=>[2200,3000,4500,6000].map(b=>`<button type="button" data-act="bud" data-v="${b}" aria-pressed="${st.budget===b}">${fmt(b)}</button>`).join("");
 function paint(){document.querySelectorAll("[data-chips]").forEach(e=>e.innerHTML=chips());document.querySelectorAll("[data-presets]").forEach(e=>e.innerHTML=presets())}
 function profile(){return`<div class="section-heading"><h2 tabindex="-1" id="h">¿Qué haces en tu laptop un día normal?</h2><p>Cuéntalo con tus palabras o elige abajo. No necesitas saber de tecnología.</p></div>
@@ -87,20 +94,24 @@ function compare(){const L=evaluate(),it=L.filter(x=>st.picks.includes(x.m.id));
  return`<div class="section-heading section-actions"><div><h2 tabindex="-1" id="h">Lo que realmente cambia</h2><p>Solo mostramos las diferencias; lo igual está resumido abajo.</p></div><button class="btn subtle" data-act="edit">Editar mi uso</button></div>
 <div class="insight">${ic("target")}<div><strong>La diferencia real</strong><p>${parts.length?parts.join(". ")+".":"Son muy parecidas para tu uso."}${st.prio==="screen"&&it.every(i=>i.m.sc===it[0].m.sc)?" Las pantallas son equivalentes entre estas opciones.":` Como priorizas “${PR[st.prio].toLowerCase()}”, pesa más: ${nm(key.m)}.`}</p></div></div>
 <p class="field-help">Comparación para tu caso.<span class="mobile-instruction"> Desliza la tabla para ver todas las opciones.</span></p><div class="matrix" tabindex="0" role="region" aria-label="Tabla comparativa. Desplázate horizontalmente si hace falta."><table><caption class="sr">Ajuste a tus tareas, diferencias y fuentes de las laptops seleccionadas</caption><thead><tr><th scope="col">Tu comparación</th>${it.map(i=>`<th scope="col">${light(i)}<h3 style="font-size:16px;margin-top:6px">${nm(i.m)}</h3></th>`).join("")}</tr></thead><tbody>
-<tr class="group"><th colspan="${it.length+1}" scope="rowgroup">Qué podrás hacer</th></tr>${st.tasks.filter(id=>new Set(it.map(i=>gap(i.m,id))).size>1).map(id=>row(T[id].l,it.map(i=>gap(i.m,id)?`<span class="light bad"><i>✕</i>Limitada</span><small>${gap(i.m,id)}</small>`:`<span class="light ok"><i>✓</i>Adecuada</span>`))).join("")}${row("Por qué",it.map(i=>`<span style="font-size:13px">${reason(i)}</span>${extra(i,L)}`))}
+<tr class="group"><th colspan="${it.length+1}" scope="rowgroup">Qué podrás hacer</th></tr>${st.tasks.filter(id=>new Set(it.map(i=>gap(i.m,id))).size>1).map(id=>row(T[id].l,it.map(i=>gap(i.m,id)?`<span class="light bad"><i>✕</i>Limitada</span><small>${gap(i.m,id)}</small>`:`<span class="light ok"><i>✓</i>Adecuada</span>`))).join("")}${row("Suficiencia",it.map(i=>`<span style="font-size:13px">${EST[estadoDe(i)][1]}${i.suf?.fuera_presupuesto?" · Fuera de presupuesto":""}</span><small>${i.suf?.estado==="mas_de_lo_necesario"?i.suf.sobras.map(s=>s.hoy).join(" "):reason(i)}</small>`))}${row("Por qué",it.map(i=>`<span style="font-size:13px">${reason(i)}</span>${extra(i,L)}`))}
 <tr class="group"><th colspan="${it.length+1}" scope="rowgroup">Diferencias que notarás</th></tr>${diff.map(([l,c])=>row(l,c)).join("")}
 <tr class="group"><th colspan="${it.length+1}" scope="rowgroup">Antes de decidir</th></tr>${row("Fuentes",it.map(i=>`<button type="button" class="btn subtle" data-act="src" data-id="${i.m.id}">Ver referencias</button>`))}${row("Ten en cuenta",it.map(i=>`<span style="font-size:13px">${i.m.note}</span>`))}
 ${row("",it.map(i=>`<button class="btn primary" data-act="choose" data-id="${i.m.id}">Elegir esta</button>`))}</tbody></table></div>
 <p class="shared"><b>Las ${it.length} comparten:</b> ${same.map(([l,c])=>`${l.toLowerCase()}: ${c[0].replace(/<[^>]+>/g," ")}`).join(" · ")}.</p>
 <div class="compare-dock"><button class="btn subtle" data-act="results">Cambiar selección</button><button class="text-btn" data-act="how">Cómo se calcula</button></div>`}
 function choice(){const L=evaluate(),i=L.find(x=>x.m.id===st.choice),m=i.m,base=L.filter(x=>x.fit).sort((a,b)=>a.m.price-b.m.price)[0];
+ const fb=(dim,ctx,label)=>`<div class="fb" data-fb="${dim}" data-ctx="${ctx}"><span>${label}</span><div class="row">${[["si","Sí"],["mas_o_menos","Más o menos"],["no","No"]].map(([v,l])=>`<button type="button" class="pick" data-act="fb" data-dim="${dim}" data-val="${v}" data-ctx="${ctx}">${l}</button>`).join("")}</div></div>`;
  return`<div class="choice"><div class="section-heading"><h2 tabindex="-1" id="h">Tu elección: ${nm(m)}</h2><p>${m.benefit}.</p></div>
-<div class="row">${light(i)}</div>
-<div class="big"><div class="box"><b>Precio</b><p class="price">${fmt(m.price)}</p><p class="src">${m.store} · ref. ${m.ref}</p><p class="field-help">Si la usas 4 años: unos <b>${fmt(Math.round(m.price/4))} por año</b> (estimación).</p></div>
-<div class="box"><b>Dónde conseguirla</b><p>${m.store}</p><p class="field-help">Precio referencial de ${mes(m.fecha)}; confírmalo antes de pagar y revisa la garantía.</p></div></div>
-<p style="font-weight:700">Por qué es buena para ti</p>${why(i,L)}
-<p class="note"><b>Lo que sacrificas:</b> ${m.note}</p>${base&&base!==i?`<p class="extra ${extra(i,L).includes("w")?"w":""}">${extra(i,L).replace(/<\/?p[^>]*>/g,"")}</p>`:""}
-${det(m)}<div class="row" style="margin-top:14px"><button class="btn subtle" data-act="src" data-id="${m.id}">Ver fuentes</button><button class="btn subtle" data-act="results">Ver otras opciones</button><button class="btn primary" data-act="edit">Empezar de nuevo</button></div></div>`}
+ <div class="row">${light(i)}</div>
+ <div class="big"><div class="box"><b>Precio</b><p class="price">${fmt(m.price)}</p><p class="src">${m.store} · ref. ${m.ref}</p><p class="field-help">Si la usas 4 años: unos <b>${fmt(Math.round(m.price/4))} por año</b> (estimación).</p></div>
+ <div class="box"><b>Dónde conseguirla</b><p>${m.store}</p><p class="field-help">Precio referencial de ${mes(m.fecha)}; confírmalo antes de pagar y revisa la garantía.</p></div></div>
+ <p style="font-weight:700">Por qué es buena para ti</p>${why(i,L)}
+ <p class="note"><b>Lo que sacrificas:</b> ${m.note}</p>${base&&base!==i?`<p class="extra ${extra(i,L).includes("w")?"w":""}">${extra(i,L).replace(/<\/?p[^>]*>/g,"")}</p>`:""}
+ ${det(m)}
+ <div class="insight" style="margin-top:14px"><div><strong>Tu opinión nos ayuda</strong><p class="field-help">Responde rápido (opcional).</p>${fb("claridad","eleccion","¿Te quedó clara esta recomendación?")}${fb("suficiencia","eleccion","¿Sientes que esta opción es adecuada para tu uso?")}</div></div>
+ <div class="row" style="margin-top:14px"><button class="btn subtle" data-act="src" data-id="${m.id}">Ver fuentes</button><button class="btn subtle" data-act="results">Ver otras opciones</button><button class="btn primary" data-act="edit">Empezar de nuevo</button></div></div>`}
+
 function render(){const s=st.step;$("intro").hidden=s!=="profile";
  $("app").innerHTML={profile,results,compare,choice}[s]();
  $("steps").innerHTML=STEPS.map(([k,l],n)=>{const en=k==="profile"||(k==="results"&&st.seen)||(k==="compare"&&st.picks.length>=2)||(k==="choice"&&st.choice);return`<li><button type="button" data-act="step" data-id="${k}" ${en?"":"disabled"} ${k===s?'aria-current="step"':""}><span>${n+1}</span>${l}</button></li>`}).join("")}
@@ -113,26 +124,29 @@ async function detect(){const raw=$("txt").value.trim();st.text=raw;const d=$("d
  st.tasks=f.length?[...new Set([...(st.tasks.length&&!st.touched?[]:keep),...f])]:keep;
  r.tareas.forEach(t=>st.intens[t.id]=t.intensidad);
  if(r.presupuesto)st.budget=r.presupuesto;if(r.prioridad)st.prio=r.prioridad;if(r.windows)st.win=true;
- st.detected={fuente:r.fuente,tareas:f};
- track("interpretacion",{fuente:r.fuente,tareas:r.tareas,negadas:r.negadas,presupuesto:Boolean(r.presupuesto),prioridad:r.prioridad,no_entendido:r.no_entendido});
- render();let msg=f.length?`Entendimos: ${r.tareas.map(t=>T[t.id].l.toLowerCase()+(t.intensidad==="ocasional"?" (a veces)":"")).join(", ")}.`:"No reconocimos tareas. Elígelas abajo.";
- if(r.no_entendido.length)msg+=` No ubicamos: ${r.no_entendido.join(", ")}; elige la tarea más parecida.`;
- if(f.length)msg+=" Corrige abajo si hace falta.";$("dn").textContent=msg;$("txt").value=raw}
-function showSrc(id){const m=C.find(x=>x.id===id);$("srcc").innerHTML=`<p><b>${nm(m)}</b><br><span class="src">${m.model}</span></p><p style="margin-top:10px"><b>Datos técnicos</b><br>${m.spec}</p><p style="margin-top:8px"><b>Precio referencial</b><br>${m.store} · ${m.ref}</p><p class="field-help">Los precios corresponden a las publicaciones consultadas y pueden variar.</p>`;$("srcd").showModal()}
+ const motor=r.motor||r.fuente;st.detected={fuente:r.fuente,motor,tareas:f};
+  track("interpretacion",{v:2,fuente:r.fuente,motor,tareas:r.tareas,negadas:r.negadas,presupuesto_detectado:Boolean(r.presupuesto),windows_detectado:Boolean(r.windows),prioridad:r.prioridad,no_entendido_cat:r.no_entendido_cat||[]});
+  render();let msg=f.length?`Entendimos: ${r.tareas.map(t=>T[t.id].l.toLowerCase()+(t.intensidad==="ocasional"?" (a veces)":"")).join(", ")}.`:"No reconocimos tareas. Elígelas abajo.";
+  if((r.no_entendido_cat||[]).length){const cats=[...new Set(r.no_entendido_cat)].map(c=>NE_CAT[c]||c).join(", ");msg+=` No ubicamos: ${cats}; elige la tarea más parecida.`;}
+  if(f.length)msg+=" Corrige abajo si hace falta.";$("dn").textContent=msg;$("txt").value=raw}
+function showSrc(id){const m=C.find(x=>x.id===id);$("srcc").innerHTML=`<p><b>${nm(m)}</b><br><span class="src">${m.model}</span></p><p style="margin-top:10px"><b>Datos técnicos</b><br>${m.spec}</p><p style="margin-top:8px"><b>Precio referencial</b><br>${m.store} · ${m.ref}</p><p class="field-help">Los precios corresponden a las publicaciones consultadas y pueden variar.</p>`;$("srcd").showModal();track("explicacion_vista",{v:2,laptop:id,bloque:"ten_en_cuenta"})}
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const a=b.dataset.act,id=b.dataset.id;
  if(a==="home"){st.step="profile";render()}
  else if(a==="how")$("how").showModal();else if(a==="closehow")$("how").close();
  else if(a==="detect")detect();else if(a==="src")showSrc(id);else if(a==="closesrc")$("srcd").close();
  else if(a==="persona"){st.tasks=[...P[id][1]];st.intens={};st.touched=1;paint()}
- else if(a==="task"){st.touched=1;const on=st.tasks.includes(id);st.tasks=on?st.tasks.filter(x=>x!==id):[...st.tasks,id];if(on)delete st.intens[id];if(st.detected)track("correccion",{tarea:id,accion:on?"quitar":"agregar",fuente:st.detected.fuente});paint();if(st.step==="results")$("list").innerHTML=list()}
+  else if(a==="task"){st.touched=1;const on=st.tasks.includes(id);st.tasks=on?st.tasks.filter(x=>x!==id):[...st.tasks,id];if(on)delete st.intens[id];if(!on&&!st.intens[id])st.intens[id]="frecuente";if(st.detected)track("correccion",{v:2,motor:st.detected.motor||st.detected.fuente,fuente:st.detected.fuente,tarea:id,accion:on?"quitar":"agregar"});paint();if(st.step==="results")$("list").innerHTML=list()}
+  else if(a==="inten"){st.touched=1;st.intens[id]=st.intens[id]==="ocasional"?"frecuente":"ocasional";paint();if(st.step==="results")$("list").innerHTML=list()}
  else if(a==="bud"){st.budget=+b.dataset.v;document.querySelectorAll("[data-bud]").forEach(x=>x.value=st.budget);paint();if(st.step==="results")$("list").innerHTML=list()}
- else if(a==="see"){if(!st.tasks.length){const d=$("dn");d.textContent="Elige al menos una tarea.";return}if($("txt"))st.text=$("txt").value;st.seen=true;st.choice=null;const f0=evaluate().find(x=>x.fit);st.picks=f0?[f0.m.id]:[];st.top=f0?f0.m.id:null;track("recomendacion",{tareas:st.tasks,intensidad:st.intens,presupuesto:st.budget,prioridad:st.prio,windows:st.win,recomendada:st.top,uso_texto:Boolean(st.detected)});go("results")}
+ else if(a==="see"){if(!st.tasks.length){const d=$("dn");d.textContent="Elige al menos una tarea.";return}if($("txt"))st.text=$("txt").value;st.seen=true;st.choice=null;st.compared=false;const L0=evaluate();const f0=L0.find(x=>x.fit);st.picks=f0?[f0.m.id]:[];st.top=f0?f0.m.id:null;st.resultAt=Date.now();const estados=Object.fromEntries(L0.map(x=>[x.m.id,x.suf.estado]));track("recomendacion",{v:2,regla_v:REGLA_SUFI_V,tareas:st.tasks,intensidad:st.intens,presupuesto:st.budget,prioridad:st.prio,windows:st.win,recomendada:st.top,aptas:L0.filter(x=>x.fit).length,estados});go("results")}
  else if(a==="edit")go("profile");else if(a==="results")go("results");
  else if(a==="pick"){const p=st.picks;if(p.includes(id))st.picks=p.filter(x=>x!==id);else if(p.length<3)p.push(id);$("list").innerHTML=list();const nb=document.querySelector(`[data-act=pick][data-id=${id}]`);nb&&nb.focus({preventScroll:true})}
- else if(a==="compare"&&st.picks.length>=2){track("comparacion",{laptops:st.picks});go("compare")}
- else if(a==="choose"){st.choice=id;track("eleccion",{laptop:id,era_recomendada:id===st.top});go("choice")}
+ else if(a==="compare"&&st.picks.length>=2){st.compared=true;const Lc=evaluate().filter(x=>st.picks.includes(x.m.id));const estados=Object.fromEntries(Lc.map(x=>[x.m.id,x.suf.estado]));track("comparacion",{v:2,laptops:st.picks,incluye_recomendada:st.picks.includes(st.top),estados});go("compare")}
+ else if(a==="choose"){st.choice=id;const Le=evaluate().find(x=>x.m.id===id);track("eleccion",{v:2,laptop:id,era_recomendada:id===st.top,estado_elegida:Le?.suf?.estado,comparo_antes:st.compared||false,duracion_ms:st.resultAt?Date.now()-st.resultAt:0});go("choice")}
+ else if(a==="fb"){track("feedback",{v:2,dimension:b.dataset.dim,valor:b.dataset.val,contexto:b.dataset.ctx});const box=b.closest(".fb");if(box)box.innerHTML='<span class="field-help">Gracias por tu respuesta.</span>'}
  else if(a==="step"&&!b.disabled)go(id)});
 document.addEventListener("input",e=>{if(e.target.matches("[data-bud]")){const v=e.target.valueAsNumber;if(v>0){st.budget=v;document.querySelectorAll("[data-presets]").forEach(x=>x.innerHTML=presets());if(st.step==="results")$("list").innerHTML=list()}}
  if(e.target.matches("[data-win]")){st.win=e.target.checked;document.querySelectorAll("[data-win]").forEach(x=>x.checked=st.win);if(st.step==="results")$("list").innerHTML=list()}
  if(e.target.name==="p"){st.prio=e.target.value;if(st.step==="results")$("list").innerHTML=list()}});
+document.addEventListener("toggle",e=>{const d=e.target;if(d?.tagName==="DETAILS"&&d.open&&d.dataset.laptop)track("explicacion_vista",{v:2,laptop:d.dataset.laptop,bloque:d.dataset.bloque||"detalles_tecnicos"});},true);
 boot();

@@ -39,5 +39,5 @@ export function interpretarConReglas(texto, tareas) {
 
   const windows = /\b(necesito windows|solo windows|requiere windows)\b/.test(a) ? true : null;
 
-  return { tareas: encontradas, negadas, presupuesto, prioridad, windows, no_entendido: [] };
+  return { tareas: encontradas, negadas, presupuesto, prioridad, windows, no_entendido_cat: [] };
 }

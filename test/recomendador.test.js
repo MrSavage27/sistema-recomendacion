@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluate } from '../public/js/recomendador.js';
+import { evaluate, REGLA_SUFI_V, clasificarSuficiencia } from '../public/js/recomendador.js';
 import { C, T } from './fixtures.js';
 
 const base = { tasks: ['docs', 'graphics'], intens: {}, budget: 4500, prio: 'speed', win: false };
@@ -26,4 +26,33 @@ test('priorizando ahorrar sale la más barata que cumple', () => {
 
 test('sin presupuesto suficiente nadie encaja', () => {
   assert.equal(top({ budget: 2000 }), undefined);
+});
+
+test('suficiencia v1: docs+zoom marca exceso de gráfica en laptops gamer', () => {
+  const r = evaluate(C, T, { tasks: ['docs', 'calls'], intens: {}, budget: 5000, prio: 'price', win: false });
+  assert.equal(REGLA_SUFI_V, 1);
+  const loq = r.find(x => x.m.id === 'loq');
+  assert.equal(loq.suf.estado, 'mas_de_lo_necesario');
+  assert.ok(loq.suf.sobras.some(s => s.dim === 'gpu'));
+});
+
+test('suficiencia v1: prioridad speed no marca exceso', () => {
+  const r = evaluate(C, T, { tasks: ['docs', 'calls'], intens: {}, budget: 5000, prio: 'speed', win: false });
+  const loq = r.find(x => x.m.id === 'loq');
+  assert.equal(loq.suf.estado, 'a_medida');
+});
+
+test('suficiencia v1: fuera de presupuesto es marca aparte', () => {
+  const r = evaluate(C, T, { tasks: ['docs', 'calls'], intens: {}, budget: 3000, prio: 'price', win: false });
+  const tuf = r.find(x => x.m.id === 'tuf');
+  assert.equal(tuf.suf.estado, 'a_medida');
+  assert.equal(tuf.suf.fuera_presupuesto, true);
+  assert.equal(tuf.fit, false);
+});
+
+test('suficiencia v1: insuficiente por requisito de tarea', () => {
+  const r = evaluate(C, T, { tasks: ['graphics'], intens: { graphics: 'frecuente' }, budget: 5000, prio: 'price', win: false });
+  const tuf = r.find(x => x.m.id === 'tuf');
+  assert.equal(tuf.suf.estado, 'insuficiente');
+  assert.ok(tuf.gaps.length > 0);
 });

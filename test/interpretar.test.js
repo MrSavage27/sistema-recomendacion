@@ -22,12 +22,12 @@ test('sanear: descarta ids inventados, duplicados y valores fuera de rango', () 
   const r = sanear({
     tareas: [{ id: 'docs', intensidad: 'frecuente' }, { id: 'hackear', intensidad: 'x' }, { id: 'docs', intensidad: 'ocasional' }],
     negadas: ['docs', 'graphics', 'otra'], presupuesto: -5, prioridad: 'barata', windows: 'si',
-    no_entendido: ['programar en Android Studio', '', 42]
+    no_entendido_cat: ['software_especifico', 'texto libre', '', 42, 'software_especifico']
   }, TAREAS, PRIORIDADES);
   assert.deepEqual(r.tareas, [{ id: 'docs', intensidad: 'frecuente' }]);
   assert.deepEqual(r.negadas, ['graphics']);
   assert.equal(r.presupuesto, null);
   assert.equal(r.prioridad, null);
   assert.equal(r.windows, null);
-  assert.deepEqual(r.no_entendido, ['programar en Android Studio']);
+  assert.deepEqual(r.no_entendido_cat, ['software_especifico']);
 });
