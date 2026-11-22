@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es-PE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Medida — Encuentra tu laptop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Manrope:wght@700;800&display=swap">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" hidden>
+<symbol id="mark" viewBox="0 0 24 24"><path d="M5 18V7l7 7 7-7v11M8 20h8"/></symbol>
+<symbol id="arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+<symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+<symbol id="laptop" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="12" rx="1.5"/><path d="m5 16-3 3v1h20v-1l-3-3M10 19h4"/></symbol>
+<symbol id="spark" viewBox="0 0 24 24"><path d="M12 2c.7 6.2 3.8 9.3 10 10-6.2.7-9.3 3.8-10 10-.7-6.2-3.8-9.3-10-10 6.2-.7 9.3-3.8 10-10Z"/></symbol>
+<symbol id="target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/></symbol>
+</svg>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<header class="header"><div class="shell head-inner">
+<button type="button" class="wordmark" data-act="home" aria-label="Medida, ir al inicio"><span class="brand-icon"><svg class="icon"><use href="#mark"/></svg></span>medida<span class="wordmark-dot">.</span></button>
+<nav aria-label="Navegación principal"><button type="button" data-act="how">Cómo funciona</button></nav>
+</div></header>
+<main class="shell" id="contenido">
+<section class="entry" id="intro"><h1>Tecnología a tu <em>medida.</em></h1><p>Cuéntanos qué haces y te decimos cuál te conviene, en palabras simples.</p></section>
+<section class="workspace" id="ws">
+<ol class="steps" id="steps" aria-label="Pasos del asesor"></ol>
+<section class="panel" id="app" aria-label="Asesor de compra"></section>
+</section>
+</main>
+<footer class="shell footer"><span><strong>medida.</strong></span><span>Catálogo de referencia · Perú · Noviembre 2026</span></footer>
+<dialog id="how" aria-labelledby="ht"><h2 id="ht">Cómo recomienda Medida</h2><ol><li><strong>Entiende tu uso.</strong> Lo que escribes se convierte en tareas con ayuda de IA (Gemini), y siempre puedes corregirlas. La IA solo interpreta tu texto: no elige la laptop.</li><li><strong>Compara con reglas visibles.</strong> Presupuesto, memoria, procesador y gráfica frente a lo que cada tarea necesita. Mostramos cada paso del razonamiento.</li><li><strong>Muestra solo lo que cambia.</strong> Lo que es igual en todas se resume en una línea.</li></ol><p class="field-help">Las estimaciones son orientativas: el rendimiento real depende del programa. Los precios son referenciales y pueden variar. El costo por año supone 4 años de uso.</p><button class="btn primary" data-act="closehow">Entendido</button></dialog>
+<dialog id="srcd" aria-labelledby="srct"><h2 id="srct">Fuentes del equipo</h2><div id="srcc"></div><button class="btn primary" style="margin-top:12px" data-act="closesrc">Cerrar</button></dialog>
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
