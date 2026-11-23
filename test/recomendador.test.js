@@ -56,3 +56,23 @@ test('suficiencia v1: insuficiente por requisito de tarea', () => {
   assert.equal(tuf.suf.estado, 'insuficiente');
   assert.ok(tuf.gaps.length > 0);
 });
+
+test('Necesito Windows excluye laptops no Windows', () => {
+  const r = evaluate(C, T, { tasks: ['docs'], intens: {}, budget: 5000, prio: 'price', win: true });
+  for (const id of ['cm14', 'slim3c']) {
+    const item = r.find(x => x.m.id === id);
+    assert.equal(item.sys, false);
+    assert.equal(item.fit, false);
+  }
+  const win = r.find(x => x.m.id === 'hp15');
+  assert.equal(win.sys, true);
+  assert.equal(win.fit, true);
+});
+
+test('laptop premium muestra Más de lo que necesitas para uso básico', () => {
+  const r = evaluate(C, T, { tasks: ['docs', 'calls'], intens: {}, budget: 9000, prio: 'price', win: false });
+  const premium = r.find(x => x.m.id === 'g614fm');
+  assert.equal(premium.fit, true);
+  assert.equal(premium.suf.estado, 'mas_de_lo_necesario');
+  assert.ok(premium.suf.sobras.length > 0);
+});

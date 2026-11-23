@@ -18,6 +18,12 @@ test('reglas: respeta negaciones', () => {
   assert.deepEqual(r.negadas, ['graphics']);
 });
 
+test('reglas: facilidad de uso se asocia a Windows', () => {
+  const r = interpretarConReglas('Quiero una laptop fácil de usar para documentos y navegar', TAREAS);
+  assert.equal(r.windows, true);
+  assert.ok(r.tareas.some(t => t.id === 'docs'));
+});
+
 test('sanear: descarta ids inventados, duplicados y valores fuera de rango', () => {
   const r = sanear({
     tareas: [{ id: 'docs', intensidad: 'frecuente' }, { id: 'hackear', intensidad: 'x' }, { id: 'docs', intensidad: 'ocasional' }],

@@ -52,6 +52,7 @@ const FEEDBACK_DIM = new Set(['claridad', 'confianza', 'suficiencia']);
 const FEEDBACK_VAL = new Set(['si', 'mas_o_menos', 'no']);
 const ORIGEN_UI = new Set(['card', 'hero', 'compare', 'choice', 'fuentes']);
 const BLOQUE_EXP = new Set(['por_que', 'detalles_tecnicos', 'ten_en_cuenta', 'fuentes']);
+const MOTIVO = new Set(['precio', 'rendimiento', 'peso', 'marca', 'confianza', 'otro']);
 function sanearEvento(tipo, datos = {}) {
   const d = datos && typeof datos === 'object' && !Array.isArray(datos) ? { ...datos } : {};
   if (Array.isArray(d.no_entendido_cat)) d.no_entendido_cat = [...new Set(d.no_entendido_cat.filter(c => NO_CAT.has(c)))].slice(0, 5);
@@ -70,6 +71,9 @@ function sanearEvento(tipo, datos = {}) {
   if (tipo === 'explicacion_vista') {
     if (typeof d.laptop !== 'string' || !d.laptop) return null;
     if (d.bloque && !BLOQUE_EXP.has(d.bloque)) delete d.bloque;
+  }
+  if (tipo === 'eleccion') {
+    if (d.motivo && !MOTIVO.has(d.motivo)) delete d.motivo;
   }
   return d;
 }

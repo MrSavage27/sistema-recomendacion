@@ -1,4 +1,5 @@
 import { pool } from '../db.js';
+import { resumirFuentes } from '../services/fuentes.js';
 
 // Cache en memoria: el catálogo cambia poco y así no consultamos RDS en cada visita.
 let cache = null;
@@ -16,7 +17,7 @@ export async function obtenerCatalogo({ fresco = false } = {}) {
                 JOIN tarea t ON t.id = pt.tarea_id
                 GROUP BY p.id, p.nombre, p.orden ORDER BY p.orden`),
     pool.query('SELECT id, etiqueta FROM prioridad ORDER BY orden'),
-    pool.query(`SELECT laptop_id, tipo, nombre, url, fecha, atributo, nota, verificada
+    pool.query(`SELECT laptop_id, tipo, nombre, url, fecha, atributo, nota, verificada, origen, independencia, senal_sesgo, valor_declarado
                 FROM fuente ORDER BY laptop_id, tipo, fecha DESC NULLS LAST, id`)
   ]);
 
@@ -26,7 +27,11 @@ export async function obtenerCatalogo({ fresco = false } = {}) {
     arr.push({
       tipo: f.tipo, nombre: f.nombre, url: f.url || null,
       fecha: f.fecha, atributo: f.atributo, nota: f.nota || '',
-      verificada: Boolean(f.verificada)
+      verificada: Boolean(f.verificada),
+      origen: f.origen || 'curada',
+      independencia: f.independencia || 'otro',
+      senal_sesgo: f.senal_sesgo || 'ninguna',
+      valor_declarado: f.valor_declarado || null
     });
     fuentesPorLaptop.set(f.laptop_id, arr);
   }
@@ -40,7 +45,8 @@ export async function obtenerCatalogo({ fresco = false } = {}) {
       benefit: r.beneficio, note: r.nota, spec: r.fuente_specs, img: r.imagen_url,
       price: Number(r.precio), store: r.tienda, ref: r.referencia,
       fecha: r.fecha_consulta,
-      fuentes: fuentesPorLaptop.get(r.id) || []
+      fuentes: fuentesPorLaptop.get(r.id) || [],
+      resumen_fuentes: resumirFuentes(fuentesPorLaptop.get(r.id) || [], { price: Number(r.precio) })
     })),
     tareas: tareas.rows.map(r => ({
       id: r.id, l: r.etiqueta, ram: r.ram_min_gb, cpu: r.cpu_tier_min,
