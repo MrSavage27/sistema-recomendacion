@@ -72,6 +72,40 @@ CREATE TABLE IF NOT EXISTS oferta (
 );
 CREATE INDEX IF NOT EXISTS oferta_vigente_idx ON oferta (laptop_id) WHERE vigente;
 
+-- Fuentes trazables por laptop (Fase 2/3: curadas, externas, consenso y sesgo).
+CREATE TABLE IF NOT EXISTS fuente (
+  id              SERIAL PRIMARY KEY,
+  laptop_id       TEXT NOT NULL REFERENCES laptop(id) ON DELETE CASCADE,
+  tipo            TEXT NOT NULL CHECK (tipo IN ('fabricante','tienda','review_tecnica','interpretacion','otro')),
+  nombre          TEXT NOT NULL,
+  url             TEXT,
+  fecha           DATE,
+  atributo        TEXT NOT NULL DEFAULT 'general',
+  nota            TEXT NOT NULL DEFAULT '',
+  verificada      BOOLEAN NOT NULL DEFAULT FALSE,
+  origen          TEXT NOT NULL DEFAULT 'curada' CHECK (origen IN ('curada','externa')),
+  independencia   TEXT NOT NULL DEFAULT 'otro' CHECK (independencia IN ('fabricante','tienda','medio_independiente','sistema','otro')),
+  senal_sesgo     TEXT NOT NULL DEFAULT 'ninguna' CHECK (senal_sesgo IN ('ninguna','patrocinado','solo_fabricante','desactualizada','configuracion_distinta','otra')),
+  valor_declarado TEXT
+);
+CREATE INDEX IF NOT EXISTS fuente_laptop_idx ON fuente (laptop_id);
+CREATE UNIQUE INDEX IF NOT EXISTS fuente_natural_idx ON fuente (laptop_id, tipo, nombre, atributo);
+
+-- Migración idempotente para BD existentes (Fase 3).
+ALTER TABLE fuente ADD COLUMN IF NOT EXISTS origen TEXT NOT NULL DEFAULT 'curada';
+ALTER TABLE fuente ADD COLUMN IF NOT EXISTS independencia TEXT NOT NULL DEFAULT 'otro';
+ALTER TABLE fuente ADD COLUMN IF NOT EXISTS senal_sesgo TEXT NOT NULL DEFAULT 'ninguna';
+ALTER TABLE fuente ADD COLUMN IF NOT EXISTS valor_declarado TEXT;
+DO $$ BEGIN
+  ALTER TABLE fuente ADD CONSTRAINT fuente_origen_chk CHECK (origen IN ('curada','externa'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER TABLE fuente ADD CONSTRAINT fuente_independencia_chk CHECK (independencia IN ('fabricante','tienda','medio_independiente','sistema','otro'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER TABLE fuente ADD CONSTRAINT fuente_sesgo_chk CHECK (senal_sesgo IN ('ninguna','patrocinado','solo_fabricante','desactualizada','configuracion_distinta','otra'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- Eventos anónimos para validar hipótesis (sin texto libre del usuario).
 CREATE TABLE IF NOT EXISTS evento (
   id     BIGSERIAL PRIMARY KEY,

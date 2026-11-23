@@ -37,7 +37,7 @@ export function interpretarConReglas(texto, tareas) {
   else if (/\b(pantalla oled|nitidez|calidad de pantalla|fidelidad de color)\b/.test(a)) prioridad = 'screen';
   else if (/\b(ahorrar|economica|mas barata)\b/.test(a)) prioridad = 'price';
 
-  const windows = /\b(necesito windows|solo windows|requiere windows)\b/.test(a) ? true : null;
+  const windows = /\b(necesito windows|solo windows|requiere windows|facil de usar|facilidad de uso|sencill[ao] de usar|facil de manejar|uso facil|intuitiv[ao]|que sea simple)\b/.test(a) ? true : null;
 
-  return { tareas: encontradas, negadas, presupuesto, prioridad, windows, no_entendido: [] };
+  return { tareas: encontradas, negadas, presupuesto, prioridad, windows, no_entendido_cat: [] };
 }

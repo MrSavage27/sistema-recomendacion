@@ -43,13 +43,47 @@ api.post('/interpretar', limiteIA, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-const TIPOS = new Set(['interpretacion', 'correccion', 'recomendacion', 'comparacion', 'eleccion']);
+const TIPOS = new Set(['interpretacion', 'correccion', 'recomendacion', 'comparacion', 'eleccion', 'explicacion_vista', 'feedback', 'paso_visto', 'fuente_vista']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const ESTADOS = new Set(['insuficiente', 'a_medida', 'mas_de_lo_necesario']);
+const NO_CAT = new Set(['software_especifico', 'hardware_especifico', 'uso_profesional', 'otro']);
+const FEEDBACK_DIM = new Set(['claridad', 'confianza', 'suficiencia']);
+const FEEDBACK_VAL = new Set(['si', 'mas_o_menos', 'no']);
+const ORIGEN_UI = new Set(['card', 'hero', 'compare', 'choice', 'fuentes']);
+const BLOQUE_EXP = new Set(['por_que', 'detalles_tecnicos', 'ten_en_cuenta', 'fuentes']);
+const MOTIVO = new Set(['precio', 'rendimiento', 'peso', 'marca', 'confianza', 'otro']);
+function sanearEvento(tipo, datos = {}) {
+  const d = datos && typeof datos === 'object' && !Array.isArray(datos) ? { ...datos } : {};
+  if (Array.isArray(d.no_entendido_cat)) d.no_entendido_cat = [...new Set(d.no_entendido_cat.filter(c => NO_CAT.has(c)))].slice(0, 5);
+  if (d.estado_elegida && !ESTADOS.has(d.estado_elegida)) delete d.estado_elegida;
+  if (d.estados && typeof d.estados === 'object') {
+    d.estados = Object.fromEntries(Object.entries(d.estados).filter(([, v]) => ESTADOS.has(v)).slice(0, 20));
+  }
+  if (tipo === 'feedback') {
+    if (!FEEDBACK_DIM.has(d.dimension)) return null;
+    if (!FEEDBACK_VAL.has(d.valor)) return null;
+  }
+  if (tipo === 'fuente_vista') {
+    if (typeof d.laptop !== 'string' || !d.laptop) return null;
+    if (d.origen_ui && !ORIGEN_UI.has(d.origen_ui)) delete d.origen_ui;
+  }
+  if (tipo === 'explicacion_vista') {
+    if (typeof d.laptop !== 'string' || !d.laptop) return null;
+    if (d.bloque && !BLOQUE_EXP.has(d.bloque)) delete d.bloque;
+  }
+  if (tipo === 'eleccion') {
+    if (d.motivo && !MOTIVO.has(d.motivo)) delete d.motivo;
+  }
+  return d;
+}
 
 api.post('/eventos', rateLimit({ windowMs: 60_000, limit: 60 }), async (req, res) => {
   const { sesion, tipo, datos } = req.body || {};
   if (!config.logEvents || !TIPOS.has(tipo)) return res.status(204).end();
-  const json = JSON.stringify(datos ?? {});
+  const saneado = sanearEvento(tipo, datos);
+  if (saneado === null) return res.status(204).end();
+  const json = JSON.stringify(saneado);
   if (json.length > 2000) return res.status(413).end();
   try {
     await registrarEvento(UUID.test(sesion) ? sesion : null, tipo, JSON.parse(json));

@@ -1,5 +1,5 @@
 // Medida · frontend. Lógica de recomendación en recomendador.js; catálogo e IA vía API.
-import { perf, gap as gapR, evaluate as evaluar } from "./recomendador.js";
+import { perf, gap as gapR, evaluate as evaluar, REGLA_SUFI_V } from "./recomendador.js";
 
 const $=id=>document.getElementById(id);
 const ic=n=>`<svg class="icon" aria-hidden="true"><use href="#${n}"/></svg>`;
@@ -11,7 +11,7 @@ const mes=f=>{const d=new Date(f);return isNaN(d)?"fecha de consulta":d.toLocale
 let C=[],T={},P={},PR={};
 
 const STEPS=[["profile","Tu uso"],["results","Recomendación"],["compare","Comparar"],["choice","Mi elección"]];
-const st={step:"profile",win:false,text:"",tasks:["docs","calls","many","graphics"],intens:{},budget:4500,prio:"speed",seen:false,picks:[],choice:null,top:null,detected:null,note:""};
+const st={step:"profile",win:false,text:"",tasks:["docs","calls","many","graphics"],intens:{},budget:4500,prio:"speed",seen:false,picks:[],choice:null,choiceMotivo:null,top:null,detected:null,note:""};
 const nm=m=>m.brand+" "+m.name;
 const gap=(m,id)=>gapR(m,T[id],st.intens[id]);
 const evaluate=()=>evaluar(C,T,st);
@@ -30,23 +30,52 @@ async function boot(){
   st.tasks=st.tasks.filter(id=>T[id]);render()}
  catch{$("app").innerHTML='<p role="alert" style="padding:24px">No pudimos cargar el catálogo. Recarga la página en unos segundos.</p>'}}
 
-const status=i=>i.fit?"ok":(i.gaps.length||!i.sys)?"bad":"warn";
-const LAB={ok:["✓","Te sirve"],warn:["!","Te queda justo"],bad:["✕","No te conviene"]};
-const light=i=>{const s=status(i);return`<span class="light ${s}"><i aria-hidden="true">${LAB[s][0]}</i>${LAB[s][1]}</span>`};
-function reason(i){if(!i.sys)return"Usa otro sistema y necesitas Windows.";if(i.gaps.length)return`No cubre bien: ${i.gaps.map(g=>T[g.id].l.toLowerCase()).join(", ")}. ${i.gaps[0].g}`;if(!i.ok)return`Cubre tus tareas, pero se pasa ${fmt(i.m.price-st.budget)} de tu tope.`;return"Cubre tus tareas y entra en tu presupuesto."}
+const EST={insuficiente:["✕","Insuficiente","bad"],a_medida:["✓","A tu medida","ok"],mas_de_lo_necesario:["!","Más de lo que necesitas","warn"]};
+const NE_CAT={software_especifico:"software específico",hardware_especifico:"hardware específico",uso_profesional:"uso profesional",otro:"otro uso"};
+const FTIPO={fabricante:"Fabricante",tienda:"Tienda",review_tecnica:"Review técnica",interpretacion:"Interpretación del sistema",otro:"Otra fuente"};
+const FATR={specs:"Especificaciones",precio:"Precio",general:"General"};
+const FORIG={curada:"Curada",externa:"Externa"};
+const FIND={fabricante:"Fabricante",tienda:"Tienda",medio_independiente:"Medio independiente",sistema:"Sistema",otro:"Otro"};
+const FSESGO={ninguna:"",patrocinado:"Posible patrocinio",solo_fabricante:"Solo fabricante",desactualizada:"Desactualizada",configuracion_distinta:"Otra configuración",otra:"Posible sesgo"};
+const CEST={verificado:["Verificado","ok"],coinciden:["Coinciden","ok"],parcial:["Parcial","warn"],limitado:["Evidencia limitada","warn"],discrepancia:["Hay discrepancia","bad"]};
+const estadoDe=i=>i.suf?.estado||(i.fit?"a_medida":"insuficiente");
+const light=i=>{const e=EST[estadoDe(i)]||EST.insuficiente;const fp=i.suf?.fuera_presupuesto||(!i.ok&&estadoDe(i)!=="insuficiente");
+  return`<span class="light ${e[2]}"><i aria-hidden="true">${e[0]}</i>${e[1]}</span>${fp?'<span class="light warn budget"><i aria-hidden="true">!</i>Fuera de presupuesto</span>':""}`};
+function reason(i){if(!i.sys)return"Usa otro sistema y necesitas Windows.";if(i.gaps.length)return`No cubre bien: ${i.gaps.map(g=>T[g.id].l.toLowerCase()).join(", ")}. ${i.gaps[0].g}`;if(i.suf?.estado==="mas_de_lo_necesario")return i.suf.sobras.map(s=>s.hoy).join(" ");if(!i.ok)return`Cubre tus tareas, pero se pasa ${fmt(i.m.price-st.budget)} de tu tope.`;return"Cubre tus tareas para el uso que describiste."}
 function extra(i,list){const base=list.find(x=>x.fit&&x.m.price===Math.min(...list.filter(y=>y.fit).map(y=>y.m.price)));if(!i.fit||!base||i===base||i.m.price<=base.m.price)return"";
  const d=i.m.price-base.m.price,g=(st.tasks.includes("graphics")||st.tasks.includes("edit"))&&perf(i.m)>perf(base.m),l=st.prio==="mobile"&&i.m.w<base.m.w-.12;
- return g||l?`<p class="extra">+${fmt(d)} frente a ${nm(base.m)}: ${g?"rinde más en juegos y edición":"pesa menos"}.</p>`:`<p class="extra w">Pagar ${fmt(d)} más que con ${nm(base.m)} no mejora lo que haces.</p>`}
-function why(i,list){const out=[];out.push([i.ok,i.ok?`Entra en tu presupuesto (${fmt(st.budget-i.m.price)} de margen)`:`Se pasa ${fmt(i.m.price-st.budget)} de tu tope`]);
- if(st.win)out.push([i.sys,i.sys?"Funciona con Windows 11":"No usa Windows"]);st.tasks.forEach(id=>{const g=gap(i.m,id);out.push([!g,g?`${T[id].l}: ${g}`:`Cubre: ${T[id].l.toLowerCase()}`])});
+ if(i.suf?.estado==="mas_de_lo_necesario") return`<p class="extra w">+${fmt(d)} frente a ${nm(base.m)}. ${i.suf.sobras.map(s=>s.hoy).join(" ")} <span class="field-help">Cuándo sí valdría la pena: ${i.suf.sobras.map(s=>s.cuando).join(" ")}</span></p>`;
+ return g||l?`<p class="extra">+${fmt(d)} frente a ${nm(base.m)}: ${g?"rinde más en lo que haces":"pesa menos para llevarla a diario"}.</p>`:`<p class="extra w">Pagar ${fmt(d)} más que con ${nm(base.m)} no mejora lo que haces.</p>`}
+function why(i,list){const out=[];
+ out.push([i.ok,i.ok?`Entra en tu presupuesto (${fmt(st.budget-i.m.price)} de margen)`:`Fuera de presupuesto: se pasa ${fmt(i.m.price-st.budget)} de tu tope`]);
+ if(st.win)out.push([i.sys,i.sys?"Funciona con Windows 11":"No usa Windows"]);
+ st.tasks.forEach(id=>{const g=gap(i.m,id);out.push([!g,g?`${T[id].l}: ${g}`:`Cubre: ${T[id].l.toLowerCase()}`])});
+ if(i.suf?.estado==="mas_de_lo_necesario") out.push([false,`Más de lo que necesitas: ${i.suf.sobras.map(s=>s.label).join(", ")} por encima de tu uso actual`]);
  const f=list.find(x=>x.fit);if(i.fit&&f===i){out.push([1,{price:"Es la más barata de las que te sirven",mobile:"Es la más liviana de las que te sirven",speed:"Es la que más rinde de las que te sirven",screen:"Su pantalla está entre las mejores de las que te sirven"}[st.prio]])}
  return`<ul class="why">${out.map(([o,t])=>`<li class="${o?"":"no"}">${t}</li>`).join("")}</ul>`}
-const det=m=>`<details><summary>Detalles técnicos</summary><ul><li><b>${m.ram} GB de RAM:</b> memoria para tener varias pestañas y programas abiertos a la vez.</li><li><b>${m.ssd} GB de SSD:</b> espacio para programas, documentos y algunos juegos.</li><li><b>${m.cpu}:</b> el “cerebro” que mueve los programas.</li><li><b>${m.gpu} (${m.gm} GB):</b> la parte que dibuja juegos y 3D.</li><li>${m.screen}</li></ul></details>`;
+const det=(m,i={})=>{const tareas=st.tasks.map(id=>T[id]).filter(Boolean);const maxRam=Math.max(0,...tareas.map(t=>t.ram||0));const maxCpu=Math.max(0,...tareas.map(t=>t.cpu||0));const needGpu=tareas.some(t=>t.ded);
+ const usoRam=maxRam? (m.ram>=maxRam? `Para tus tareas, ${m.ram} GB cubre lo que pides (${maxRam} GB recomendados).`:`Para tus tareas se recomiendan ${maxRam} GB; esta trae ${m.ram} GB.`) : `Con ${m.ram} GB tienes margen para varias pestañas y programas a la vez.`;
+ const usoCpu=maxCpu? (m.ct>=maxCpu? `Para tu uso, este procesador tiene el nivel que piden tus tareas.`:`Tus tareas piden más margen de procesador del que ofrece este equipo.`) : `Afecta qué tan fluido se siente al abrir programas y trabajar con varias cosas.`;
+ const usoGpu=needGpu? (m.gm? `Para juegos/3D o edición, esta gráfica dedicada sí influye en tu experiencia.`:`Tus tareas necesitan gráfica dedicada y este equipo no la trae.`) : (m.gm? `Para tu uso actual, la gráfica dedicada no cambia mucho la experiencia diaria.`:`Para documentos, videollamadas y navegación, la gráfica integrada suele ser suficiente.`);
+ const usoPant=st.prio==="screen"? `Como priorizas pantalla, fíjate en nitidez, tamaño y comodidad visual.` : /144\s*Hz/i.test(m.screen)? `Los 144 Hz se notan más en juegos; para estudio u oficina no siempre son prioritarios.` : `Para estudio y oficina, importa más la comodidad y nitidez que la tasa de refresco.`;
+ const usoPeso=st.prio==="mobile"? `Como la llevarás contigo, su peso sí influye en el día a día.` : `Si la llevas poco, el peso importa menos; si la llevas a diario, se nota más.`;
+ const usoSys=st.win? (i.sys!==false? `Cumple el requisito de Windows que marcaste.`:`No cumple el requisito de Windows que marcaste.`) : `Solo importa si necesitas un programa específico de Windows.`;
+ const li=(t,que,uso,cuando)=>`<li><b>${t}:</b> ${que}<br><span class="field-help"><b>Para tu uso:</b> ${uso} <b>Cuándo te importa:</b> ${cuando}</span></li>`;
+ return `<details data-laptop="${m.id}" data-bloque="detalles_tecnicos"><summary>Detalles técnicos</summary><ul>
+ ${li(`${m.ram} GB de RAM`, "memoria que usa la laptop para tener varias cosas abiertas a la vez.", usoRam, "cuando usas muchas pestañas, videollamadas o varios programas juntos.")}
+ ${li(m.cpu, "el procesador que ejecuta los programas.", usoCpu, "cuando editas, juegas o quieres más fluidez con varias tareas.")}
+ ${li(`${m.gpu} (${m.gm} GB)`, "la parte gráfica que dibuja imágenes, juegos y 3D.", usoGpu, "en juegos, 3D o edición; en tareas básicas importa menos.")}
+ ${li(`${m.ssd} GB de SSD`, "almacenamiento rápido para sistema, programas y archivos.", `Tienes ${m.ssd} GB para programas y archivos; el uso real depende de cuánto guardes.`, "si guardas muchos archivos, juegos o proyectos grandes.")}
+ ${li("Pantalla", m.screen, usoPant, "si trabajas muchas horas, juegas o te importa la nitidez/color.")}
+ ${li("Peso", `${m.w} kg`, usoPeso, "si la transportas seguido en mochila.")}
+ ${li("Sistema", m.os, usoSys, "cuando un programa o tu estudio/trabajo requiere Windows.")}
+ </ul><p class="field-help" style="margin-top:8px">Interpretación orientativa del sistema; verifica la configuración exacta en la fuente antes de comprar.</p></details>`;};
 const src=m=>`<p class="src">${fmt(m.price)} · ${m.store} · ref. ${m.ref} · precio referencial, ${mes(m.fecha)}</p>`;
 const img=m=>m.img
   ?`<div class="pimg"><img src="${m.img}" alt="${nm(m)}" loading="lazy" style="max-width:100%;height:132px;object-fit:contain"></div>`
   :`<div class="pimg"><div>${ic("laptop")}${m.brand}</div></div>`;
-const chips=()=>Object.entries(T).map(([id,t])=>`<button type="button" class="pick" data-act="task" data-id="${id}" aria-pressed="${st.tasks.includes(id)}">${ic("check")}${t.l}${st.intens[id]==="ocasional"&&st.tasks.includes(id)?" · a veces":""}</button>`).join("");
+const chips=()=>Object.entries(T).map(([id,t])=>{const on=st.tasks.includes(id),oc=st.intens[id]==="ocasional";
+  return`<span class="chip-wrap"><button type="button" class="pick" data-act="task" data-id="${id}" aria-pressed="${on}">${ic("check")}${t.l}</button>${on?`<button type="button" class="pick inten" data-act="inten" data-id="${id}" aria-pressed="${oc}" aria-label="${t.l}: ${oc?"ocasional":"frecuente"}; toca para cambiar">${oc?"A veces":"Frecuente"}</button>`:""}</span>`}).join("");
 const presets=()=>[2200,3000,4500,6000].map(b=>`<button type="button" data-act="bud" data-v="${b}" aria-pressed="${st.budget===b}">${fmt(b)}</button>`).join("");
 function paint(){document.querySelectorAll("[data-chips]").forEach(e=>e.innerHTML=chips());document.querySelectorAll("[data-presets]").forEach(e=>e.innerHTML=presets())}
 function profile(){return`<div class="section-heading"><h2 tabindex="-1" id="h">¿Qué haces en tu laptop un día normal?</h2><p>Cuéntalo con tus palabras o elige abajo. No necesitas saber de tecnología.</p></div>
@@ -62,9 +91,9 @@ function profile(){return`<div class="section-heading"><h2 tabindex="-1" id="h">
 <fieldset><legend>¿Qué es lo más importante?</legend><div class="prio">${Object.entries(PR).map(([k,v])=>`<label><input type="radio" name="p" value="${k}" ${st.prio===k?"checked":""}>${v}</label>`).join("")}</div></fieldset><label class="os-toggle"><input type="checkbox" data-win ${st.win?"checked":""}>Necesito Windows</label></aside></div>
 <div class="form-footer"><p class="field-help">Después podrás cambiar todo esto sin volver aquí.</p><button class="btn primary" data-act="see">Ver mi recomendación ${ic("arrow")}</button></div>`}
 function heroCard(i,list){const m=i.m;return`<article class="hero">${img(m)}<div>${light(i)}<h3>${nm(m)}</h3><p class="benefit">${m.benefit}</p>
-<p class="price">${fmt(m.price)}</p>${src(m)}<p style="margin-top:10px;font-weight:700">Por qué la elegí</p>${why(i,list)}${extra(i,list)}<p class="note"><b>Ten en cuenta:</b> ${m.note}</p>${det(m)}
+<p class="price">${fmt(m.price)}</p>${src(m)}<p style="margin-top:10px;font-weight:700">Por qué la elegí</p>${why(i,list)}${extra(i,list)}<p class="note"><b>Ten en cuenta:</b> ${m.note}</p>${det(m,i)}
 <div class="row" style="margin-top:10px"><button class="btn primary" data-act="choose" data-id="${m.id}">Quedarme con esta ${ic("arrow")}</button><button class="btn subtle" data-act="pick" data-id="${m.id}" aria-label="${st.picks.includes(m.id)?"Quitar":"Añadir"} ${nm(m)} ${st.picks.includes(m.id)?"de":"a"} la comparación" aria-pressed="${st.picks.includes(m.id)}">${st.picks.includes(m.id)?"✓ En la comparación":"Comparar con otras"}</button><button type="button" class="text-btn" data-act="src" data-id="${m.id}" aria-label="Fuentes de ${nm(m)}">Fuentes</button></div></div></article>`}
-function card(i,list){const m=i.m,p=st.picks.includes(m.id);return`<article class="product ${p?"selected":""}">${img(m)}<div style="margin-top:8px">${light(i)}</div><h3>${nm(m)}</h3><p class="benefit" style="font-size:15px">${m.benefit}</p><p class="price" style="font-size:20px">${fmt(m.price)}</p><p class="src">${m.store} · precio referencial</p><p class="reason">${reason(i)}</p>${extra(i,list)}${det(m)}<div class="row" style="margin-top:auto"><button class="btn subtle" data-act="pick" data-id="${m.id}" aria-label="${p?"Quitar":"Añadir"} ${nm(m)} ${p?"de":"a"} la comparación" aria-pressed="${p}">${p?"✓ En la comparación":"Añadir a comparar"}</button><button type="button" class="text-btn" data-act="src" data-id="${m.id}" aria-label="Fuentes de ${nm(m)}">Fuentes</button></div></article>`}
+function card(i,list){const m=i.m,p=st.picks.includes(m.id);return`<article class="product ${p?"selected":""}">${img(m)}<div style="margin-top:8px">${light(i)}</div><h3>${nm(m)}</h3><p class="benefit" style="font-size:15px">${m.benefit}</p><p class="price" style="font-size:20px">${fmt(m.price)}</p><p class="src">${m.store} · precio referencial</p><p class="reason">${reason(i)}</p>${extra(i,list)}${det(m,i)}<div class="row" style="margin-top:auto"><button class="btn subtle" data-act="pick" data-id="${m.id}" aria-label="${p?"Quitar":"Añadir"} ${nm(m)} ${p?"de":"a"} la comparación" aria-pressed="${p}">${p?"✓ En la comparación":"Añadir a comparar"}</button><button type="button" class="text-btn" data-act="src" data-id="${m.id}" aria-label="Fuentes de ${nm(m)}">Fuentes</button></div></article>`}
 function list(){const L=evaluate(),f=L.find(x=>x.fit);let h="";
  if(f){h+=heroCard(f,L);}else{const c=L.filter(x=>!x.gaps.length).sort((a,b)=>a.m.price-b.m.price)[0];h+=`<div class="insight warn">${ic("target")}<div><strong>Ninguna opción encaja con todo lo que pides</strong><p>${c?`${nm(c.m)} cubre tus tareas desde ${fmt(c.m.price)}, ${fmt(c.m.price-st.budget)} sobre tu tope.`:"Prueba quitando alguna tarea o subiendo el presupuesto."}</p></div></div>`}
  const rest=L.filter(x=>x!==f);
@@ -87,20 +116,24 @@ function compare(){const L=evaluate(),it=L.filter(x=>st.picks.includes(x.m.id));
  return`<div class="section-heading section-actions"><div><h2 tabindex="-1" id="h">Lo que realmente cambia</h2><p>Solo mostramos las diferencias; lo igual está resumido abajo.</p></div><button class="btn subtle" data-act="edit">Editar mi uso</button></div>
 <div class="insight">${ic("target")}<div><strong>La diferencia real</strong><p>${parts.length?parts.join(". ")+".":"Son muy parecidas para tu uso."}${st.prio==="screen"&&it.every(i=>i.m.sc===it[0].m.sc)?" Las pantallas son equivalentes entre estas opciones.":` Como priorizas “${PR[st.prio].toLowerCase()}”, pesa más: ${nm(key.m)}.`}</p></div></div>
 <p class="field-help">Comparación para tu caso.<span class="mobile-instruction"> Desliza la tabla para ver todas las opciones.</span></p><div class="matrix" tabindex="0" role="region" aria-label="Tabla comparativa. Desplázate horizontalmente si hace falta."><table><caption class="sr">Ajuste a tus tareas, diferencias y fuentes de las laptops seleccionadas</caption><thead><tr><th scope="col">Tu comparación</th>${it.map(i=>`<th scope="col">${light(i)}<h3 style="font-size:16px;margin-top:6px">${nm(i.m)}</h3></th>`).join("")}</tr></thead><tbody>
-<tr class="group"><th colspan="${it.length+1}" scope="rowgroup">Qué podrás hacer</th></tr>${st.tasks.filter(id=>new Set(it.map(i=>gap(i.m,id))).size>1).map(id=>row(T[id].l,it.map(i=>gap(i.m,id)?`<span class="light bad"><i>✕</i>Limitada</span><small>${gap(i.m,id)}</small>`:`<span class="light ok"><i>✓</i>Adecuada</span>`))).join("")}${row("Por qué",it.map(i=>`<span style="font-size:13px">${reason(i)}</span>${extra(i,L)}`))}
+<tr class="group"><th colspan="${it.length+1}" scope="rowgroup">Qué podrás hacer</th></tr>${st.tasks.filter(id=>new Set(it.map(i=>gap(i.m,id))).size>1).map(id=>row(T[id].l,it.map(i=>gap(i.m,id)?`<span class="light bad"><i>✕</i>Limitada</span><small>${gap(i.m,id)}</small>`:`<span class="light ok"><i>✓</i>Adecuada</span>`))).join("")}${row("Suficiencia",it.map(i=>`<span style="font-size:13px">${EST[estadoDe(i)][1]}${i.suf?.fuera_presupuesto?" · Fuera de presupuesto":""}</span><small>${i.suf?.estado==="mas_de_lo_necesario"?i.suf.sobras.map(s=>s.hoy).join(" "):reason(i)}</small>`))}${row("Por qué",it.map(i=>`<span style="font-size:13px">${reason(i)}</span>${extra(i,L)}`))}
 <tr class="group"><th colspan="${it.length+1}" scope="rowgroup">Diferencias que notarás</th></tr>${diff.map(([l,c])=>row(l,c)).join("")}
-<tr class="group"><th colspan="${it.length+1}" scope="rowgroup">Antes de decidir</th></tr>${row("Fuentes",it.map(i=>`<button type="button" class="btn subtle" data-act="src" data-id="${i.m.id}">Ver referencias</button>`))}${row("Ten en cuenta",it.map(i=>`<span style="font-size:13px">${i.m.note}</span>`))}
+<tr class="group"><th colspan="${it.length+1}" scope="rowgroup">Antes de decidir</th></tr>${row("Confianza de fuentes",it.map(i=>{const r=i.m.resumen_fuentes||{};const n=r.nivel_confianza||"bajo";const cls=n==="alto"?"ok":n==="medio"?"warn":"bad";const lab=n==="alto"?"Alta":n==="medio"?"Media":"Baja";return `<span class="light ${cls}"><i aria-hidden="true">•</i>${lab}</span><small>${(r.verificadas||0)} verificadas · ${(r.externas||0)} externas</small>`}))}${row("Fuentes",it.map(i=>`<button type="button" class="btn subtle" data-act="src" data-id="${i.m.id}">Ver referencias</button>`))}${row("Ten en cuenta",it.map(i=>`<span style="font-size:13px">${i.m.note}</span>`))}
 ${row("",it.map(i=>`<button class="btn primary" data-act="choose" data-id="${i.m.id}">Elegir esta</button>`))}</tbody></table></div>
 <p class="shared"><b>Las ${it.length} comparten:</b> ${same.map(([l,c])=>`${l.toLowerCase()}: ${c[0].replace(/<[^>]+>/g," ")}`).join(" · ")}.</p>
 <div class="compare-dock"><button class="btn subtle" data-act="results">Cambiar selección</button><button class="text-btn" data-act="how">Cómo se calcula</button></div>`}
 function choice(){const L=evaluate(),i=L.find(x=>x.m.id===st.choice),m=i.m,base=L.filter(x=>x.fit).sort((a,b)=>a.m.price-b.m.price)[0];
+ const fb=(dim,ctx,label)=>`<div class="fb" data-fb="${dim}" data-ctx="${ctx}"><span>${label}</span><div class="row">${[["si","Sí"],["mas_o_menos","Más o menos"],["no","No"]].map(([v,l])=>`<button type="button" class="pick" data-act="fb" data-dim="${dim}" data-val="${v}" data-ctx="${ctx}">${l}</button>`).join("")}</div></div>`;
  return`<div class="choice"><div class="section-heading"><h2 tabindex="-1" id="h">Tu elección: ${nm(m)}</h2><p>${m.benefit}.</p></div>
-<div class="row">${light(i)}</div>
-<div class="big"><div class="box"><b>Precio</b><p class="price">${fmt(m.price)}</p><p class="src">${m.store} · ref. ${m.ref}</p><p class="field-help">Si la usas 4 años: unos <b>${fmt(Math.round(m.price/4))} por año</b> (estimación).</p></div>
-<div class="box"><b>Dónde conseguirla</b><p>${m.store}</p><p class="field-help">Precio referencial de ${mes(m.fecha)}; confírmalo antes de pagar y revisa la garantía.</p></div></div>
-<p style="font-weight:700">Por qué es buena para ti</p>${why(i,L)}
-<p class="note"><b>Lo que sacrificas:</b> ${m.note}</p>${base&&base!==i?`<p class="extra ${extra(i,L).includes("w")?"w":""}">${extra(i,L).replace(/<\/?p[^>]*>/g,"")}</p>`:""}
-${det(m)}<div class="row" style="margin-top:14px"><button class="btn subtle" data-act="src" data-id="${m.id}">Ver fuentes</button><button class="btn subtle" data-act="results">Ver otras opciones</button><button class="btn primary" data-act="edit">Empezar de nuevo</button></div></div>`}
+ <div class="row">${light(i)}</div>
+ <div class="big"><div class="box"><b>Precio</b><p class="price">${fmt(m.price)}</p><p class="src">${m.store} · ref. ${m.ref}</p><p class="field-help">Si la usas 4 años: unos <b>${fmt(Math.round(m.price/4))} por año</b> (estimación).</p></div>
+ <div class="box"><b>Dónde conseguirla</b><p>${m.store}</p><p class="field-help">Precio referencial de ${mes(m.fecha)}; confírmalo antes de pagar y revisa la garantía.</p></div></div>
+ <p style="font-weight:700">Por qué es buena para ti</p>${why(i,L)}
+ <p class="note"><b>Lo que sacrificas:</b> ${m.note}</p>${base&&base!==i?`<p class="extra ${extra(i,L).includes("w")?"w":""}">${extra(i,L).replace(/<\/?p[^>]*>/g,"")}</p>`:""}
+ ${det(m,i)}
+ <div class="insight" style="margin-top:14px"><div><strong>Tu opinión nos ayuda</strong><p class="field-help">Responde rápido (opcional).</p>${fb("claridad","eleccion","¿Te quedó clara esta recomendación?")}${fb("suficiencia","eleccion","¿Sientes que esta opción es adecuada para tu uso?")}${st.choiceMotivo?'<div class="fb"><span class="field-help">Gracias por tu respuesta.</span></div>':`<div class="fb"><span>¿Qué influyó más en tu elección? (opcional)</span><div class="row">${[["precio","Precio"],["rendimiento","Rendimiento"],["peso","Peso"],["marca","Marca"],["confianza","Confianza en fuentes"],["otro","Otro"]].map(([v,l])=>`<button type="button" class="pick" data-act="motivo" data-id="${v}">${l}</button>`).join("")}</div></div>`}</div></div>
+ <div class="row" style="margin-top:14px"><button class="btn subtle" data-act="src" data-id="${m.id}">Ver fuentes</button><button class="btn subtle" data-act="results">Ver otras opciones</button><button class="btn primary" data-act="edit">Empezar de nuevo</button></div></div>`}
+
 function render(){const s=st.step;$("intro").hidden=s!=="profile";
  $("app").innerHTML={profile,results,compare,choice}[s]();
  $("steps").innerHTML=STEPS.map(([k,l],n)=>{const en=k==="profile"||(k==="results"&&st.seen)||(k==="compare"&&st.picks.length>=2)||(k==="choice"&&st.choice);return`<li><button type="button" data-act="step" data-id="${k}" ${en?"":"disabled"} ${k===s?'aria-current="step"':""}><span>${n+1}</span>${l}</button></li>`}).join("")}
@@ -113,26 +146,48 @@ async function detect(){const raw=$("txt").value.trim();st.text=raw;const d=$("d
  st.tasks=f.length?[...new Set([...(st.tasks.length&&!st.touched?[]:keep),...f])]:keep;
  r.tareas.forEach(t=>st.intens[t.id]=t.intensidad);
  if(r.presupuesto)st.budget=r.presupuesto;if(r.prioridad)st.prio=r.prioridad;if(r.windows)st.win=true;
- st.detected={fuente:r.fuente,tareas:f};
- track("interpretacion",{fuente:r.fuente,tareas:r.tareas,negadas:r.negadas,presupuesto:Boolean(r.presupuesto),prioridad:r.prioridad,no_entendido:r.no_entendido});
- render();let msg=f.length?`Entendimos: ${r.tareas.map(t=>T[t.id].l.toLowerCase()+(t.intensidad==="ocasional"?" (a veces)":"")).join(", ")}.`:"No reconocimos tareas. Elígelas abajo.";
- if(r.no_entendido.length)msg+=` No ubicamos: ${r.no_entendido.join(", ")}; elige la tarea más parecida.`;
- if(f.length)msg+=" Corrige abajo si hace falta.";$("dn").textContent=msg;$("txt").value=raw}
-function showSrc(id){const m=C.find(x=>x.id===id);$("srcc").innerHTML=`<p><b>${nm(m)}</b><br><span class="src">${m.model}</span></p><p style="margin-top:10px"><b>Datos técnicos</b><br>${m.spec}</p><p style="margin-top:8px"><b>Precio referencial</b><br>${m.store} · ${m.ref}</p><p class="field-help">Los precios corresponden a las publicaciones consultadas y pueden variar.</p>`;$("srcd").showModal()}
+ const motor=r.motor||r.fuente;st.detected={fuente:r.fuente,motor,tareas:f};
+  track("interpretacion",{v:2,fuente:r.fuente,motor,tareas:r.tareas,negadas:r.negadas,presupuesto_detectado:Boolean(r.presupuesto),windows_detectado:Boolean(r.windows),prioridad:r.prioridad,no_entendido_cat:r.no_entendido_cat||[]});
+  render();let msg=f.length?`Entendimos: ${r.tareas.map(t=>T[t.id].l.toLowerCase()+(t.intensidad==="ocasional"?" (a veces)":"")).join(", ")}.`:"No reconocimos tareas. Elígelas abajo.";
+  if((r.no_entendido_cat||[]).length){const cats=[...new Set(r.no_entendido_cat)].map(c=>NE_CAT[c]||c).join(", ");msg+=` No ubicamos: ${cats}; elige la tarea más parecida.`;}
+  if(f.length)msg+=" Corrige abajo si hace falta.";$("dn").textContent=msg;$("txt").value=raw}
+function showSrc(id,origen="fuentes"){const m=C.find(x=>x.id===id);if(!m)return;
+  const fbs=(dim,ctx,label)=>`<div class="fb" data-fb="${dim}" data-ctx="${ctx}"><span>${label}</span><div class="row">${[["si","Sí"],["mas_o_menos","Más o menos"],["no","No"]].map(([v,l])=>`<button type="button" class="pick" data-act="fb" data-dim="${dim}" data-val="${v}" data-ctx="${ctx}">${l}</button>`).join("")}</div></div>`;
+  const r=m.resumen_fuentes||{};
+  const resumenAtr=Object.values(r.por_atributo||{}).map(a=>{const c=CEST[a.estado]||CEST.limitado;return `<span class="light ${c[1]}" style="font-size:12px;padding:3px 8px"><i aria-hidden="true">•</i>${esc(FATR[a.atributo]||a.atributo)}: ${c[0]}</span>`}).join(" ");
+  const alertas=(r.alertas||[]).map(a=>`<li>${esc(a)}</li>`).join("");
+  const fuentes=(m.fuentes||[]).map(f=>{const tipo=FTIPO[f.tipo]||f.tipo;const atr=FATR[f.atributo]||f.atributo;const fecha=f.fecha?mes(f.fecha):"sin fecha";
+    const url=f.url&&/^https?:\/\//.test(f.url)?`<a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">Ver fuente</a>`:"";
+    const ver=f.verificada?'<span class="light ok" style="font-size:12px;padding:2px 8px"><i aria-hidden="true">✓</i>Verificada</span>':'<span class="light warn" style="font-size:12px;padding:2px 8px"><i aria-hidden="true">!</i>Referencial</span>';
+    const sesgo=FSESGO[f.senal_sesgo]||"";const sesgoTag=sesgo?`<span class="light bad" style="font-size:11px;padding:2px 7px"><i aria-hidden="true">!</i>${esc(sesgo)}</span>`:"";
+    const meta=[FORIG[f.origen]||f.origen,FIND[f.independencia]||f.independencia].filter(Boolean).join(" · ");
+    return `<li class="src-item"><div class="row" style="gap:8px;align-items:center"><b>${esc(tipo)}</b><span class="src">${esc(atr)} · ${fecha}</span>${ver}${sesgoTag}</div><div>${esc(f.nombre)} ${url}</div><div class="src" style="margin-top:2px">${esc(meta)}${f.valor_declarado?` · Valor declarado: ${esc(f.valor_declarado)}`:""}</div>${f.nota?`<p class="field-help" style="margin:2px 0 0">${esc(f.nota)}</p>`:""}</li>`}).join("");
+  $("srcc").innerHTML=`<p><b>${nm(m)}</b><br><span class="src">${esc(m.model)}</span></p>
+    <div style="margin-top:10px"><b>Fuentes y evidencia</b><p class="field-help" style="margin:4px 0 8px">Cada dato muestra su origen, fecha y verificación. Las alertas de confianza/sesgo son señales heurísticas curadas, no una certificación absoluta. La recomendación es una interpretación del sistema basada en reglas visibles.</p>
+    ${resumenAtr?`<div class="row" style="margin-bottom:8px">${resumenAtr}</div>`:""}
+    ${alertas?`<div class="insight warn" style="margin:8px 0"><div><strong>Señales a revisar</strong><ul class="why" style="margin-top:6px">${alertas}</ul></div></div>`:""}
+    ${fuentes?`<ul class="src-list">${fuentes}</ul>`:`<p><b>Datos técnicos</b><br>${esc(m.spec||"")}</p><p style="margin-top:8px"><b>Precio referencial</b><br>${esc(m.store)} · ${esc(m.ref)}</p>`}
+    </div>
+    <div class="insight" style="margin-top:12px"><div><strong>¿Te ayudó esta información?</strong><p class="field-help">Opcional.</p>${fbs("confianza","fuentes","¿Estas fuentes te dan confianza?")}</div></div>`;
+  $("srcd").showModal();track("fuente_vista",{v:2,laptop:id,origen_ui:origen});}
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const a=b.dataset.act,id=b.dataset.id;
  if(a==="home"){st.step="profile";render()}
  else if(a==="how")$("how").showModal();else if(a==="closehow")$("how").close();
- else if(a==="detect")detect();else if(a==="src")showSrc(id);else if(a==="closesrc")$("srcd").close();
+ else if(a==="detect")detect();else if(a==="src"){const o=st.step==="compare"?"compare":st.step==="choice"?"choice":st.step==="results"?"card":"fuentes";showSrc(id,o)}else if(a==="closesrc")$("srcd").close();
  else if(a==="persona"){st.tasks=[...P[id][1]];st.intens={};st.touched=1;paint()}
- else if(a==="task"){st.touched=1;const on=st.tasks.includes(id);st.tasks=on?st.tasks.filter(x=>x!==id):[...st.tasks,id];if(on)delete st.intens[id];if(st.detected)track("correccion",{tarea:id,accion:on?"quitar":"agregar",fuente:st.detected.fuente});paint();if(st.step==="results")$("list").innerHTML=list()}
+  else if(a==="task"){st.touched=1;const on=st.tasks.includes(id);st.tasks=on?st.tasks.filter(x=>x!==id):[...st.tasks,id];if(on)delete st.intens[id];if(!on&&!st.intens[id])st.intens[id]="frecuente";if(st.detected)track("correccion",{v:2,motor:st.detected.motor||st.detected.fuente,fuente:st.detected.fuente,tarea:id,accion:on?"quitar":"agregar"});paint();if(st.step==="results")$("list").innerHTML=list()}
+  else if(a==="inten"){st.touched=1;st.intens[id]=st.intens[id]==="ocasional"?"frecuente":"ocasional";paint();if(st.step==="results")$("list").innerHTML=list()}
  else if(a==="bud"){st.budget=+b.dataset.v;document.querySelectorAll("[data-bud]").forEach(x=>x.value=st.budget);paint();if(st.step==="results")$("list").innerHTML=list()}
- else if(a==="see"){if(!st.tasks.length){const d=$("dn");d.textContent="Elige al menos una tarea.";return}if($("txt"))st.text=$("txt").value;st.seen=true;st.choice=null;const f0=evaluate().find(x=>x.fit);st.picks=f0?[f0.m.id]:[];st.top=f0?f0.m.id:null;track("recomendacion",{tareas:st.tasks,intensidad:st.intens,presupuesto:st.budget,prioridad:st.prio,windows:st.win,recomendada:st.top,uso_texto:Boolean(st.detected)});go("results")}
+ else if(a==="see"){if(!st.tasks.length){const d=$("dn");d.textContent="Elige al menos una tarea.";return}if($("txt"))st.text=$("txt").value;st.seen=true;st.choice=null;st.choiceMotivo=null;st.compared=false;const L0=evaluate();const f0=L0.find(x=>x.fit);st.picks=f0?[f0.m.id]:[];st.top=f0?f0.m.id:null;st.resultAt=Date.now();const estados=Object.fromEntries(L0.map(x=>[x.m.id,x.suf.estado]));track("recomendacion",{v:2,regla_v:REGLA_SUFI_V,tareas:st.tasks,intensidad:st.intens,presupuesto:st.budget,prioridad:st.prio,windows:st.win,recomendada:st.top,aptas:L0.filter(x=>x.fit).length,estados});go("results")}
  else if(a==="edit")go("profile");else if(a==="results")go("results");
  else if(a==="pick"){const p=st.picks;if(p.includes(id))st.picks=p.filter(x=>x!==id);else if(p.length<3)p.push(id);$("list").innerHTML=list();const nb=document.querySelector(`[data-act=pick][data-id=${id}]`);nb&&nb.focus({preventScroll:true})}
- else if(a==="compare"&&st.picks.length>=2){track("comparacion",{laptops:st.picks});go("compare")}
- else if(a==="choose"){st.choice=id;track("eleccion",{laptop:id,era_recomendada:id===st.top});go("choice")}
+ else if(a==="compare"&&st.picks.length>=2){st.compared=true;const Lc=evaluate().filter(x=>st.picks.includes(x.m.id));const estados=Object.fromEntries(Lc.map(x=>[x.m.id,x.suf.estado]));track("comparacion",{v:2,laptops:st.picks,incluye_recomendada:st.picks.includes(st.top),estados});go("compare")}
+ else if(a==="choose"){st.choice=id;st.choiceMotivo=null;const Le=evaluate().find(x=>x.m.id===id);track("eleccion",{v:2,laptop:id,era_recomendada:id===st.top,estado_elegida:Le?.suf?.estado,comparo_antes:st.compared||false,duracion_ms:st.resultAt?Date.now()-st.resultAt:0});go("choice")}
+ else if(a==="fb"){track("feedback",{v:2,dimension:b.dataset.dim,valor:b.dataset.val,contexto:b.dataset.ctx});const box=b.closest(".fb");if(box)box.innerHTML='<span class="field-help">Gracias por tu respuesta.</span>'}
+  else if(a==="motivo"){if(!st.choice)return;st.choiceMotivo=id;const Le=evaluate().find(x=>x.m.id===st.choice);track("eleccion",{v:2,laptop:st.choice,era_recomendada:st.choice===st.top,estado_elegida:Le?.suf?.estado,comparo_antes:st.compared||false,duracion_ms:st.resultAt?Date.now()-st.resultAt:0,motivo:id});const box=b.closest(".fb");if(box)box.innerHTML='<span class="field-help">Gracias por tu respuesta.</span>'}
  else if(a==="step"&&!b.disabled)go(id)});
 document.addEventListener("input",e=>{if(e.target.matches("[data-bud]")){const v=e.target.valueAsNumber;if(v>0){st.budget=v;document.querySelectorAll("[data-presets]").forEach(x=>x.innerHTML=presets());if(st.step==="results")$("list").innerHTML=list()}}
  if(e.target.matches("[data-win]")){st.win=e.target.checked;document.querySelectorAll("[data-win]").forEach(x=>x.checked=st.win);if(st.step==="results")$("list").innerHTML=list()}
  if(e.target.name==="p"){st.prio=e.target.value;if(st.step==="results")$("list").innerHTML=list()}});
+document.addEventListener("toggle",e=>{const d=e.target;if(d?.tagName==="DETAILS"&&d.open&&d.dataset.laptop)track("explicacion_vista",{v:2,laptop:d.dataset.laptop,bloque:d.dataset.bloque||"detalles_tecnicos"});},true);
 boot();
