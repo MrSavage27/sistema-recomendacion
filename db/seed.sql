@@ -7,11 +7,11 @@ INSERT INTO tarea (id, etiqueta, descripcion_ia, ram_min_gb, cpu_tier_min, requi
  8, 1, FALSE, NULL,
  '\b(word|document\w*|trabajos|pdf|navega\w*|apuntes|diapositivas|powerpoint|excel|ofimatica)\b', 1),
 ('calls', 'Zoom, Meet o Teams',
- 'Videollamadas y clases o reuniones virtuales: Zoom, Google Meet, Microsoft Teams.',
+ 'Videollamadas, reuniones y clases virtuales: Zoom, Google Meet, Microsoft Teams. Incluye trabajo remoto y home office.',
  8, 1, FALSE, NULL,
- '\b(zoom|meet|teams|videollamada\w*|clases virtuales)\b', 2),
+ '\b(zoom|meet|teams|videollamada\w*|clases virtuales|clases (?:online|en linea)|reuniones? (?:virtual(?:es)?|online|en linea|remotas?)|trabajo remoto|home office|teletrabajo)\b', 2),
 ('many', 'Muchas pestañas o programas a la vez',
- 'Multitarea intensa: muchas pestañas del navegador o varios programas abiertos al mismo tiempo.',
+ 'Multitarea intensa: muchas pestañas del navegador o varios programas abiertos al mismo tiempo, incluido el trabajo remoto o profesional con varias apps abiertas a la vez.',
  16, 1, FALSE, NULL,
  '\b(muchas pestanas|varias pestanas|\d{2,} pestanas|multitarea|apps a la vez|varias apps|varios programas)\b', 3),
 ('edit', 'Editar fotos o videos cortos',
@@ -21,7 +21,7 @@ INSERT INTO tarea (id, etiqueta, descripcion_ia, ram_min_gb, cpu_tier_min, requi
 ('graphics', 'Juegos o diseño 3D',
  'Videojuegos o modelado/render 3D: Blender, Revit, SolidWorks, AutoCAD 3D, juegos de PC.',
  16, 2, TRUE, 6,
- '\b(3d|render\w*|blender|revit|solidworks|gaming|juegos?|jugar|videojuegos?)\b', 5)
+ '\b(3d|render\w*|blender|revit|solidworks|gaming|gamer|juegos?|jugar|videojuegos?)\b', 5)
 ON CONFLICT (id) DO UPDATE SET
   etiqueta = EXCLUDED.etiqueta, descripcion_ia = EXCLUDED.descripcion_ia,
   ram_min_gb = EXCLUDED.ram_min_gb, cpu_tier_min = EXCLUDED.cpu_tier_min,
@@ -47,7 +47,7 @@ INSERT INTO prioridad (id, etiqueta, orden) VALUES
 ON CONFLICT (id) DO UPDATE SET etiqueta = EXCLUDED.etiqueta, orden = EXCLUDED.orden;
 
 INSERT INTO tienda (nombre) VALUES
-('Tottus Perú'), ('Falabella Perú'), ('Hiraoka'), ('Tiendas EFE'), ('Ripley Perú'), ('Referencia Perú')
+('Tottus Perú'), ('Falabella Perú'), ('Hiraoka'), ('Tiendas EFE'), ('Ripley Perú'), ('Referencia Perú'), ('LaptopShop')
 ON CONFLICT (nombre) DO NOTHING;
 
 INSERT INTO laptop (id, marca, nombre, modelo, cpu, cpu_tier, ram_gb, ssd_gb, gpu, gpu_mem_gb,
@@ -76,27 +76,52 @@ INSERT INTO laptop (id, marca, nombre, modelo, cpu, cpu_tier, ram_gb, ssd_gb, gp
  '15.6″ Full HD', 1, 1.59, '1,59 kg', 'Windows 11 Home',
  'Ligera, con buen espacio y lista para estudio o trabajo',
  'No tiene gráfica dedicada: no es para juegos exigentes ni 3D pesado. Verifica precio y disponibilidad antes de comprar.',
- 'HP Perú · ficha B9TY2LA', '/img/hp15.webp'),
+ 'HP Perú · ficha B9TY2LA · Imagen: HP Perú, página oficial del producto', '/img/hp15.webp'),
 ('slim3', 'Lenovo', 'IdeaPad Slim 3', '15IAH8 · 83ER00NKLM', 'Intel Core i5-12450H', 2, 16, 512, 'Intel UHD Graphics', 0,
  '15.6″ Full HD', 1, 1.62, '1,62 kg', 'Windows 11 Home',
  'Buena para estudio y trabajo, ligera y con 16 GB de RAM',
  'No tiene gráfica dedicada: no es para juegos exigentes ni 3D pesado. La RAM va soldada en esta configuración.',
- 'Lenovo PSREF · IdeaPad Slim 3 15IAH8', '/img/slim3.webp'),
+ 'Lenovo PSREF · IdeaPad Slim 3 15IAH8 · Imagen: Lenovo PSREF, foto de la familia 15IAH8', '/img/slim3.webp'),
 ('cm14', 'ASUS', 'Chromebook CM14', 'CM1402CM2A', 'MediaTek Kompanio 520', 1, 8, 128, 'ARM Mali-G52 MC2', 0,
  '14″ Full HD', 1, 1.45, '1,45 kg', 'ChromeOS',
  'Simple, ligera y segura para estudio, navegación y tareas en la nube',
  'Usa ChromeOS, no Windows. 8 GB de RAM y 128 GB eMMC: buena para estudio/navegación; no para programas Windows ni juegos/3D exigentes. Verifica precio y configuración exacta antes de comprar.',
- 'ASUS · Chromebook CM14 CM1402C', '/img/cm14.webp'),
+ 'ASUS · Chromebook CM14 CM1402C · Imagen: ASUS, página oficial de la familia CM1402C', '/img/cm14.webp'),
 ('slim3c', 'Lenovo', 'IdeaPad Slim 3 Chromebook', '14M868 · 82XJ', 'MediaTek Kompanio 520', 1, 8, 128, 'ARM Mali-G52 2EE MC2', 0,
  '14″ Full HD', 1, 1.30, '1,30 kg', 'ChromeOS',
  'Ligera, simple y cómoda para clases, documentos y navegación',
  'Usa ChromeOS, no Windows. 8 GB de RAM y 128 GB eMMC: buena para estudio/navegación; no para programas Windows ni juegos/3D exigentes. Verifica precio y configuración exacta antes de comprar.',
- 'Lenovo PSREF · IdeaPad Slim 3 Chromebook 14M868', '/img/slim3c.webp'),
+ 'Lenovo PSREF · IdeaPad Slim 3 Chromebook 14M868 · Imagen: Lenovo PSREF, foto de la familia 14M868', '/img/slim3c.webp'),
 ('g614fm', 'ASUS', 'ROG Strix G16', 'G614FM-RV009W', 'AMD Ryzen 9 9955HX', 3, 16, 1024, 'NVIDIA RTX 5060', 8,
  '16″ WUXGA IPS · 165 Hz', 2, 2.50, '2,50 kg', 'Windows 11 Home',
  'Potencia de sobra para tareas exigentes, creación y juegos de alta demanda',
  'Es muy potente y cara para uso básico: si solo haces documentos, clases o navegación, estarás pagando por capacidad que no usarás. Verifica precio y configuración exacta antes de comprar.',
- 'Tiendas EFE / ASUS ROG · G614FM-RV009W', '/img/g614fm.webp')
+ 'Tiendas EFE / ASUS ROG · G614FM-RV009W · Imagen: ASUS ROG, página oficial de la familia G614 (2025)', '/img/g614fm.webp'),
+('v15g5', 'Lenovo', 'V15 G5', '15IRL · 83GW005LLD', 'Intel Core i5-13420H', 2, 24, 1024, 'Intel UHD Graphics', 0,
+ '15.6″ Full HD', 1, 1.65, '1,65 kg', 'Windows 11 Home',
+ 'Mucha memoria y 1 TB para trabajar con varios programas a la vez',
+ 'No tiene gráfica dedicada. Sus 24 GB vienen como 8 GB + 16 GB: confirma con la tienda si es configuración de fábrica y cómo cubre la garantía.',
+ 'LaptopShop · ficha 83GW005LLD · Imagen: Lenovo PSREF, foto de la familia V15 G5 IRL', '/img/v15g5.webp'),
+('loq15irx9', 'Lenovo', 'LOQ 15', '15IRX9 · 83DV0184LM', 'Intel Core i7-13650HX', 3, 24, 1024, 'NVIDIA RTX 3050', 6,
+ '15.6″ Full HD · 144 Hz', 2, 2.39, '2,39 kg', 'Windows 11 Home',
+ 'Juegos y trabajo pesado con 24 GB de RAM y 1 TB',
+ 'Sus 24 GB vienen como 8 GB + 16 GB y el 1 TB como 2 SSD de 512 GB: confirma con la tienda la configuración y la garantía. Pesa 2,39 kg.',
+ 'LaptopShop · ficha 83DV0184LM · Imagen: Lenovo PSREF, foto de la familia LOQ 15IRX9', '/img/loq15irx9.webp'),
+('yoga7', 'Lenovo', 'Yoga 7 2-en-1', '16ILL10 · 83JT0047US', 'Intel Core Ultra 7 256V', 3, 16, 1024, 'Intel Arc Graphics 140V', 0,
+ '16″ WUXGA táctil', 1, 1.90, '1,90 kg', 'Windows 11 Home',
+ 'Pantalla táctil grande y convertible, con 1 TB',
+ 'No tiene gráfica dedicada. El código termina en US: confirma garantía en Perú y distribución del teclado antes de comprar.',
+ 'LaptopShop · ficha 83JT0047US · Imagen: Lenovo PSREF, foto de la familia Yoga 7 2-in-1 16ILL10', '/img/yoga7.webp'),
+('tufa16', 'ASUS', 'TUF Gaming A16', 'FA607NUG-RL216', 'AMD Ryzen 7 7445HS', 3, 32, 1024, 'NVIDIA RTX 4050', 6,
+ '16″ WUXGA · 144 Hz', 2, 2.20, '2,20 kg', 'Windows 11 Home',
+ 'Juegos y 3D con 32 GB de RAM y 1 TB',
+ 'Sus 32 GB vienen como 2 módulos de 16 GB: confirma con la tienda si es configuración de fábrica y cómo cubre la garantía.',
+ 'LaptopShop · ficha FA607NUG-RL216 · Imagen: ASUS, página oficial de la familia TUF Gaming A16 FA607', '/img/tufa16.webp'),
+('zenbook14', 'ASUS', 'Zenbook 14 OLED', 'UM3406HA-WS74T', 'AMD Ryzen 7 8840HS', 3, 16, 512, 'AMD Radeon Graphics', 0,
+ '14″ WUXGA OLED táctil', 3, 1.30, '1,20–1,30 kg según fuente', 'Windows 11 Home',
+ 'Muy liviana, con pantalla OLED y buen procesador',
+ 'No tiene gráfica dedicada. ASUS indica memoria soldada en variantes de 16 GB de esta familia, así que no cuentes con ampliarla. La tienda y ASUS difieren en el peso: confirma el dato y la garantía en Perú.',
+ 'LaptopShop · ficha UM3406HA-WS74T / ASUS · familia UM3406 · Imagen: ASUS, página oficial de la familia UM3406', '/img/zenbook14.webp')
 ON CONFLICT (id) DO UPDATE SET
   marca = EXCLUDED.marca, nombre = EXCLUDED.nombre, modelo = EXCLUDED.modelo, cpu = EXCLUDED.cpu,
   cpu_tier = EXCLUDED.cpu_tier, ram_gb = EXCLUDED.ram_gb, ssd_gb = EXCLUDED.ssd_gb, gpu = EXCLUDED.gpu,
@@ -122,8 +147,21 @@ JOIN tienda t ON t.nombre = v.tienda
 ON CONFLICT (laptop_id, tienda_id, referencia) DO UPDATE SET
   precio = EXCLUDED.precio, fecha_consulta = EXCLUDED.fecha_consulta, vigente = TRUE;
 
+INSERT INTO oferta (laptop_id, tienda_id, precio, referencia, fecha_consulta)
+SELECT v.laptop_id, t.id, v.precio, v.referencia, DATE '2026-11-23'
+FROM (VALUES
+  ('v15g5',     3439, '83GW005LLD'),
+  ('loq15irx9', 5199, '83DV0184LM'),
+  ('yoga7',     4799, '83JT0047US'),
+  ('tufa16',    6199, 'FA607NUG-RL216'),
+  ('zenbook14', 4699, 'UM3406HA-WS74T')
+) AS v(laptop_id, precio, referencia)
+JOIN tienda t ON t.nombre = 'LaptopShop'
+ON CONFLICT (laptop_id, tienda_id, referencia) DO UPDATE SET
+  precio = EXCLUDED.precio, fecha_consulta = EXCLUDED.fecha_consulta, vigente = TRUE;
+
 -- Limpieza acotada: reemplaza fuentes curadas de laptops gestionadas por seed para evitar filas obsoletas por cambio de clave natural.
-DELETE FROM fuente WHERE laptop_id IN ('loq','victus','nitro','tuf','hp15','slim3','cm14','slim3c','g614fm');
+DELETE FROM fuente WHERE laptop_id IN ('loq','victus','nitro','tuf','hp15','slim3','cm14','slim3c','g614fm','v15g5','loq15irx9','yoga7','tufa16','zenbook14');
 
 -- Fuentes trazables (Fase 2/3). verificada=true solo con URL estable + configuración compatible confirmada + fecha de consulta.
 INSERT INTO fuente (laptop_id, tipo, nombre, url, fecha, atributo, nota, verificada, origen, independencia, senal_sesgo, valor_declarado) VALUES
@@ -165,3 +203,17 @@ INSERT INTO fuente (laptop_id, tipo, nombre, url, fecha, atributo, nota, verific
 ON CONFLICT (laptop_id, tipo, nombre, atributo) DO UPDATE SET
   url = EXCLUDED.url, fecha = EXCLUDED.fecha, nota = EXCLUDED.nota, verificada = EXCLUDED.verificada,
   origen = EXCLUDED.origen, independencia = EXCLUDED.independencia, senal_sesgo = EXCLUDED.senal_sesgo, valor_declarado = EXCLUDED.valor_declarado;
+
+-- Ficha y precio salen de la misma tienda: la ficha no cuenta como segunda fuente independiente.
+INSERT INTO fuente (laptop_id, tipo, nombre, url, fecha, atributo, nota, verificada, origen, independencia, senal_sesgo, valor_declarado) VALUES
+('v15g5','tienda','LaptopShop · ficha 83GW005LLD','https://laptopshop.pe/product/lenovo-v15-g5-irl-core-i5-13420h-uhd-graphics-24gb-ram-1tb-ssd-15-6-fhd/',DATE '2026-11-23','specs','Ficha de tienda: i5-13420H, 24GB DDR5-5200 (8GB + 16GB), 1TB SSD, Intel UHD, 15.6 FHD, 1.65 kg, Windows 11 Home. No confirmado con Lenovo.',TRUE,'curada','otro','configuracion_distinta','i5-13420H, 24GB DDR5, 1TB SSD, Intel UHD'),
+('v15g5','tienda','LaptopShop · ref. 83GW005LLD','https://laptopshop.pe/product/lenovo-v15-g5-irl-core-i5-13420h-uhd-graphics-24gb-ram-1tb-ssd-15-6-fhd/',DATE '2026-11-23','precio','Precio publicado por tienda al 2026-11-23. Puede variar por stock o campaña.',TRUE,'curada','tienda','ninguna','S/ 3439'),
+('loq15irx9','tienda','LaptopShop · ficha 83DV0184LM','https://laptopshop.pe/product/lenovo-loq-15irx9-core-i7-13650hx-6gb-rtx3050-24gb-ram-1tb-ssd-15-6-fhd-144hz/',DATE '2026-11-23','specs','Ficha de tienda: i7-13650HX, 24GB DDR5-4800 (8GB + 16GB), 1TB SSD (2x 512GB), RTX 3050 6GB, 15.6 FHD 144Hz, 2.39 kg, Windows 11 Home. No confirmado con Lenovo.',TRUE,'curada','otro','configuracion_distinta','i7-13650HX, 24GB DDR5, 1TB SSD, RTX 3050 6GB'),
+('loq15irx9','tienda','LaptopShop · ref. 83DV0184LM','https://laptopshop.pe/product/lenovo-loq-15irx9-core-i7-13650hx-6gb-rtx3050-24gb-ram-1tb-ssd-15-6-fhd-144hz/',DATE '2026-11-23','precio','Precio publicado por tienda al 2026-11-23. Puede variar por stock o campaña.',TRUE,'curada','tienda','ninguna','S/ 5199'),
+('yoga7','tienda','LaptopShop · ficha 83JT0047US','https://laptopshop.pe/product/lenovo-yoga-7-16ill10-2-en-1-core-ultra-7-256v-intel-arc-graphics-16gb-ram-1tb-ssd-16-wuxga-tactil/',DATE '2026-11-23','specs','Ficha de tienda: Core Ultra 7 256V, 16GB LPDDR5X-8533, 1TB SSD, Intel Arc 140V, 16 WUXGA táctil, 1.90 kg, Windows 11 Home. No confirmado con Lenovo.',TRUE,'curada','otro','configuracion_distinta','Core Ultra 7 256V, 16GB LPDDR5X, 1TB SSD, Intel Arc 140V'),
+('yoga7','tienda','LaptopShop · ref. 83JT0047US','https://laptopshop.pe/product/lenovo-yoga-7-16ill10-2-en-1-core-ultra-7-256v-intel-arc-graphics-16gb-ram-1tb-ssd-16-wuxga-tactil/',DATE '2026-11-23','precio','Precio publicado por tienda al 2026-11-23. Puede variar por stock o campaña.',TRUE,'curada','tienda','ninguna','S/ 4799'),
+('tufa16','tienda','LaptopShop · ficha FA607NUG-RL216','https://laptopshop.pe/product/asus-tuf-gaming-a16-fa607nug-rl216-ryzen-7-7445hs-6gb-rtx4050-32gb-ram-1tb-ssd-16-wuxga-144hz/',DATE '2026-11-23','specs','Ficha de tienda: Ryzen 7 7445HS, 32GB DDR5-5600 (2x 16GB), 1TB SSD, RTX 4050 6GB, 16 WUXGA 144Hz, 2.20 kg, Windows 11 Home. No confirmado con ASUS.',TRUE,'curada','otro','configuracion_distinta','Ryzen 7 7445HS, 32GB DDR5, 1TB SSD, RTX 4050 6GB'),
+('tufa16','tienda','LaptopShop · ref. FA607NUG-RL216','https://laptopshop.pe/product/asus-tuf-gaming-a16-fa607nug-rl216-ryzen-7-7445hs-6gb-rtx4050-32gb-ram-1tb-ssd-16-wuxga-144hz/',DATE '2026-11-23','precio','Precio publicado por tienda al 2026-11-23. Puede variar por stock o campaña.',TRUE,'curada','tienda','ninguna','S/ 6199'),
+('zenbook14','tienda','LaptopShop · ficha UM3406HA-WS74T','https://laptopshop.pe/product/asus-zenbook-14-oled-um3406-ryzen-7-8840hs-amd-radeon-graphics-16gb-ram-512gb-ssd-14-wuxga-oled-tactil/',DATE '2026-11-23','specs','Ficha de tienda: Ryzen 7 8840HS, 16GB LPDDR5X, 512GB SSD, Radeon, 14 WUXGA OLED táctil, 1.30 kg, Windows 11 Home.',TRUE,'curada','otro','configuracion_distinta','Ryzen 7 8840HS, 16GB LPDDR5X, 512GB SSD, 1.30 kg'),
+('zenbook14','fabricante','ASUS · Zenbook 14 OLED UM3406 (familia)','https://www.asus.com/laptops/for-home/zenbook/asus-zenbook-14-oled-um3406/techspec/',DATE '2026-11-23','specs','Ficha oficial de la familia UM3406: lista Ryzen 7 8840HS, 16GB LPDDR5X on board y pesos de 1.20 y 1.28 kg según variante. No identifica el SKU WS74T.',FALSE,'curada','fabricante','solo_fabricante','Ryzen 7 8840HS, 16GB LPDDR5X, 1.20-1.28 kg'),
+('zenbook14','tienda','LaptopShop · ref. UM3406HA-WS74T','https://laptopshop.pe/product/asus-zenbook-14-oled-um3406-ryzen-7-8840hs-amd-radeon-graphics-16gb-ram-512gb-ssd-14-wuxga-oled-tactil/',DATE '2026-11-23','precio','Precio publicado por tienda al 2026-11-23. Puede variar por stock o campaña.',TRUE,'curada','tienda','ninguna','S/ 4699');

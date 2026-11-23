@@ -1,7 +1,17 @@
 // Mismos datos que db/seed.sql, en la forma que devuelve /api/catalogo.
 import { resumirFuentes } from '../src/services/fuentes.js';
 
+const fichaTienda = (nota, precio) => [
+  { tipo: 'tienda', nombre: 'LaptopShop · ficha', url: 'https://laptopshop.pe/', fecha: '2026-11-23', atributo: 'specs', nota, verificada: true, origen: 'curada', independencia: 'otro', senal_sesgo: 'configuracion_distinta', valor_declarado: nota },
+  { tipo: 'tienda', nombre: 'LaptopShop · ref.', url: 'https://laptopshop.pe/', fecha: '2026-11-23', atributo: 'precio', nota: 'Precio publicado por tienda.', verificada: true, origen: 'curada', independencia: 'tienda', senal_sesgo: 'ninguna', valor_declarado: `S/ ${precio}` }
+];
+
 const raw = [
+  { id: 'v15g5', ct: 2, ram: 24, gm: 0, w: 1.65, sc: 1, price: 3439, os: 'Windows 11 Home', fuentes: fichaTienda('24GB DDR5-5200', 3439) },
+  { id: 'loq15irx9', ct: 3, ram: 24, gm: 6, w: 2.39, sc: 2, price: 5199, os: 'Windows 11 Home', fuentes: fichaTienda('24GB DDR5-4800', 5199) },
+  { id: 'yoga7', ct: 3, ram: 16, gm: 0, w: 1.9, sc: 1, price: 4799, os: 'Windows 11 Home', fuentes: fichaTienda('16GB LPDDR5X-8533', 4799) },
+  { id: 'tufa16', ct: 3, ram: 32, gm: 6, w: 2.2, sc: 2, price: 6199, os: 'Windows 11 Home', fuentes: fichaTienda('32GB DDR5-5600', 6199) },
+  { id: 'zenbook14', ct: 3, ram: 16, gm: 0, w: 1.3, sc: 3, price: 4699, os: 'Windows 11 Home', fuentes: fichaTienda('16GB LPDDR5X', 4699) },
   { id: 'loq', ct: 3, ram: 16, gm: 6, w: 1.8, sc: 2, price: 4299, os: 'Windows 11 Home',
     fuentes: [
       { tipo: 'fabricante', nombre: 'Lenovo PSREF · LOQ 15ARP10E', url: 'https://psref.lenovo.com/Product/LOQ/LOQ_15ARP10E', fecha: '2026-11-22', atributo: 'specs', nota: 'Ficha técnica oficial de la familia LOQ 15ARP10E. Confirma Ryzen 7 7735HS, 16GB DDR5, 512GB SSD, RTX 4050, 15.6 FHD 144Hz; verificar SKU exacto local antes de comprar.', verificada: true, origen: 'curada', independencia: 'fabricante', senal_sesgo: 'solo_fabricante', valor_declarado: 'Ryzen 7 7735HS, 16GB RAM, 512GB SSD, RTX 4050 6GB' },
@@ -63,13 +73,13 @@ export const TAREAS = [
   { id: 'docs', l: 'Documentos', ram: 8, cpu: 1, ded: false, gmFrecuente: null,
     patron: '\\b(word|document\\w*|trabajos|pdf|navega\\w*|apuntes|diapositivas|powerpoint|excel|ofimatica)\\b' },
   { id: 'calls', l: 'Zoom', ram: 8, cpu: 1, ded: false, gmFrecuente: null,
-    patron: '\\b(zoom|meet|teams|videollamada\\w*|clases virtuales)\\b' },
+    patron: '\\b(zoom|meet|teams|videollamada\\w*|clases virtuales|clases (?:online|en linea)|reuniones? (?:virtual(?:es)?|online|en linea|remotas?)|trabajo remoto|home office|teletrabajo)\\b' },
   { id: 'many', l: 'Pestañas', ram: 16, cpu: 1, ded: false, gmFrecuente: null,
     patron: '\\b(muchas pestanas|varias pestanas|\\d{2,} pestanas|multitarea|apps a la vez|varias apps|varios programas)\\b' },
   { id: 'edit', l: 'Edición', ram: 16, cpu: 2, ded: false, gmFrecuente: null,
     patron: '\\b(editar|edicion|fotos|video corto|videos cortos|premiere|photoshop|lightroom|capcut|davinci|illustrator)\\b' },
   { id: 'graphics', l: 'Juegos', ram: 16, cpu: 2, ded: true, gmFrecuente: 6,
-    patron: '\\b(3d|render\\w*|blender|revit|solidworks|gaming|juegos?|jugar|videojuegos?)\\b' }
+    patron: '\\b(3d|render\\w*|blender|revit|solidworks|gaming|gamer|juegos?|jugar|videojuegos?)\\b' }
 ];
 export const T = Object.fromEntries(TAREAS.map(t => [t.id, t]));
 export const PRIORIDADES = ['price', 'mobile', 'screen', 'speed'].map(id => ({ id, etiqueta: id }));

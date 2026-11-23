@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { obtenerCatalogo, registrarEvento } from '../repositories/catalogo.js';
-import { interpretar } from '../services/interpretar.js';
+import { interpretar, SISTEMAS_REQUERIDOS, EXIGENCIAS_GRAFICAS } from '../services/interpretar.js';
 import { geminiDisponible } from '../services/gemini.js';
 import { pool } from '../db.js';
 import { config } from '../config.js';
@@ -56,6 +56,8 @@ const MOTIVO = new Set(['precio', 'rendimiento', 'peso', 'marca', 'confianza', '
 function sanearEvento(tipo, datos = {}) {
   const d = datos && typeof datos === 'object' && !Array.isArray(datos) ? { ...datos } : {};
   if (Array.isArray(d.no_entendido_cat)) d.no_entendido_cat = [...new Set(d.no_entendido_cat.filter(c => NO_CAT.has(c)))].slice(0, 5);
+  if (d.sistema_requerido != null && !SISTEMAS_REQUERIDOS.includes(d.sistema_requerido)) delete d.sistema_requerido;
+  if (d.exigencia_grafica != null && !EXIGENCIAS_GRAFICAS.includes(d.exigencia_grafica)) delete d.exigencia_grafica;
   if (d.estado_elegida && !ESTADOS.has(d.estado_elegida)) delete d.estado_elegida;
   if (d.estados && typeof d.estados === 'object') {
     d.estados = Object.fromEntries(Object.entries(d.estados).filter(([, v]) => ESTADOS.has(v)).slice(0, 20));
