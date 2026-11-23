@@ -43,7 +43,7 @@ textarea{display:block;width:100%;min-height:92px;resize:vertical;border:1px sol
 .presets button{border:1px solid #d1daca;border-radius:6px;background:#fff;padding:4px 8px;font-size:12px;font-weight:700}
 .presets button[aria-pressed=true]{border-color:#618465;background:#eaf3e6;color:var(--deep)}
 .prio{display:grid;gap:5px}.prio label{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;font-size:14px;cursor:pointer}
-.prio input{accent-color:var(--deep);width:16px;height:16px}
+.prio input{accent-color:var(--deep);width:16px;height:16px}.os-toggle select{margin-left:auto;padding:5px 8px;border:1px solid #c8d5c7;border-radius:7px;background:#fff;color:var(--ink);font:inherit;font-weight:600}
 .form-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap}
 .livebar{display:grid;gap:10px;border:1px solid #dce5d7;background:#f4f7ef;border-radius:14px;padding:14px 16px;margin-bottom:18px}
 .livebar .number-input{max-width:190px;background:#fff}

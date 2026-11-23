@@ -11,5 +11,8 @@ export const config = {
   geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
   geminiTimeoutMs: num(process.env.GEMINI_TIMEOUT_MS, 8000),
   geminiDailyCap: num(process.env.GEMINI_DAILY_CAP, 500), // tope propio para no agotar la cuota gratuita
+  geminiCacheMax: num(process.env.GEMINI_CACHE_MAX, 500),
+  geminiCacheTtlMs: num(process.env.GEMINI_CACHE_TTL_MS, 86_400_000),
+  geminiRespuestasArchivo: process.env.GEMINI_RESPUESTAS_ARCHIVO || '', // solo modo pruebas: respuestas en disco
   logEvents: (process.env.LOG_EVENTS ?? 'true') !== 'false'
 };

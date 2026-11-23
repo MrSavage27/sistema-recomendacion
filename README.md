@@ -60,6 +60,8 @@ npm test
 
 Notas del plan gratuito: los límites son por proyecto y cambian con el tiempo (revísalos en AI Studio), y Google puede usar los datos para mejorar sus productos, por eso **no se envían datos personales** y la app solo manda el texto de uso (máx. 350 caracteres). Hay un tope diario propio (`GEMINI_DAILY_CAP`) y un límite de 15 solicitudes por minuto por IP; al superarlos se usan las reglas.
 
+Las respuestas de Gemini se guardan 24 h en memoria, así un texto repetido no gasta cuota. Para pruebas o demos usa `npm run dev:pruebas`: la primera respuesta de cada frase queda en `.cache/gemini-respuestas.json` (ignorado por Git, sin el texto original) y las siguientes salen de ahí aunque Gemini esté saturado. Si cambian el modelo, las instrucciones o las tareas, esas frases se vuelven a consultar. Borra ese archivo para empezar de cero.
+
 ## 3. Subir a GitHub
 
 1. Crea un repositorio **vacío** en GitHub (sin README ni .gitignore), por ejemplo `medida`.
