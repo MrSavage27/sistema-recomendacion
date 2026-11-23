@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { attachDatabasePool } from '@vercel/functions';
 import pg from 'pg';
 import { config } from './config.js';
 
@@ -6,13 +8,20 @@ import { config } from './config.js';
 pg.types.setTypeParser(1082, v => v);
 
 if (!config.databaseUrl) {
-  console.error('Falta DATABASE_URL. Copia .env.example a .env y complétalo.');
-  process.exit(1);
+  // En una función serverless, process.exit mataría la instancia sin dejar el motivo en los logs.
+  throw new Error('Falta DATABASE_URL. En local copia .env.example a .env; en Vercel agrégala en Environment Variables.');
 }
+
+// Ruta estática a propósito: Vercel solo empaqueta el archivo si puede deducirla del código.
+const CA_RDS = fileURLToPath(new URL('../certs/rds-global-bundle.pem', import.meta.url));
 
 function sslOptions() {
   if (!config.pgSsl) return false;
-  if (config.pgSslCaPath) return { ca: fs.readFileSync(config.pgSslCaPath, 'utf8') };
+  const rutaCa = config.pgSslCaPath || (process.env.VERCEL ? CA_RDS : '');
+  if (rutaCa) {
+    if (!fs.existsSync(rutaCa)) throw new Error(`No se encontró el certificado PGSSL_CA: ${rutaCa}`);
+    return { ca: fs.readFileSync(rutaCa, 'utf8') };
+  }
   // Sin bundle CA: cifra la conexión pero no verifica el certificado (aceptable en el AWS Lab).
   return { rejectUnauthorized: false };
 }
@@ -20,9 +29,10 @@ function sslOptions() {
 export const pool = new pg.Pool({
   connectionString: config.databaseUrl,
   ssl: sslOptions(),
-  max: 5,
+  // Cada instancia de la función tiene su propio pool y una db.t3.micro admite pocas conexiones.
+  max: 3,
   connectionTimeoutMillis: 8000,
-  idleTimeoutMillis: 30000,
+  idleTimeoutMillis: 10000,
   keepAlive: true,
   // Sin este retardo, el primer keepalive TCP usa el valor del sistema (~2 h) y no evita el corte del NAT.
   keepAliveInitialDelayMillis: 10000,
@@ -32,3 +42,6 @@ export const pool = new pg.Pool({
 });
 
 pool.on('error', err => console.error('[pg] error inesperado en el pool:', err.message));
+
+// Libera las conexiones inactivas antes de que Fluid compute suspenda la instancia.
+if (process.env.VERCEL) attachDatabasePool(pool);
