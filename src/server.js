@@ -24,8 +24,13 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Error interno' });
 });
 
-app.listen(config.port, () => {
-  console.log(`Medida escuchando en http://localhost:${config.port}`);
-  if (!config.geminiApiKey) console.warn('GEMINI_API_KEY vacía: se usará la interpretación por reglas.');
-  if (config.geminiRespuestasArchivo) console.log(`Modo pruebas: respuestas de Gemini en ${config.geminiRespuestasArchivo}`);
-});
+// En Vercel la plataforma invoca la app exportada; abrir un puerto solo aplica en local y EC2.
+if (!process.env.VERCEL) {
+  app.listen(config.port, () => {
+    console.log(`Medida escuchando en http://localhost:${config.port}`);
+    if (!config.geminiApiKey) console.warn('GEMINI_API_KEY vacía: se usará la interpretación por reglas.');
+    if (config.geminiRespuestasArchivo) console.log(`Modo pruebas: respuestas de Gemini en ${config.geminiRespuestasArchivo}`);
+  });
+}
+
+export default app;
